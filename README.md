@@ -9,8 +9,6 @@ Basic quadtree (2D space) hierarchically arranging quadrupole information for a 
 ## Tasks
 - `qtreehat.c` interface to optionally take target points as arguments
 - separate tests of the value, gradient pair via random line integration
-- make this a local git repo (step 0 ?)
-- figure out the max number of nodes needed to pre-allocate
-- solve the mystery of the inaccurate $-1/r$ potential simulation
+- figure out the max number of nodes needed to pre-allocate (run some experiments; is $2N$ enough?)
 - split up source code such that the MEX file is clearly seen as a special case
 - use within a N-body WASM/C++/JS interactive animation

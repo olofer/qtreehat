@@ -19,6 +19,9 @@
  * Also calculates the gradient of wp(i) w.r.t. r(i)_x, and r(i)_y.
  * So wp has three columns: {value, grad_x, grad_y}
  *
+ * Two outputs: [wp, nno] = qptreehat(..), then nno = number of nodes in the tree
+ * Zero outputs: wp will be stored in "ans" + debug/stats print-outs are shown
+ *
  * COMPILE: build_mex('qtreehat');
  * TEST:    test_qtreehat.m
  *
@@ -737,8 +740,9 @@ bool isDoubleRealVector(const mxArray* a) {
 #define ARG_EPK      prhs[5]
 #define ARG_POTSTR   prhs[6]
 
-#define MAX_OUTARGS  1
+#define MAX_OUTARGS  2
 #define OUT_WP       plhs[0]
+#define OUT_NNODES   plhs[1]
 
 void mexFunction(int nlhs, 
                  mxArray** plhs,
@@ -939,6 +943,10 @@ void mexFunction(int nlhs,
   THEFREE(pt);
   THEFREE(pt_scratch);
   THEFREE(nodes);
+
+  if (nlhs == 2) {
+    OUT_NNODES = mxCreateDoubleScalar((double)(nno + 1));
+  }
 
   return;
 }

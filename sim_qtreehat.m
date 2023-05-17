@@ -30,8 +30,8 @@ EXAMPLE:
 It seems that the treecode approximation degrades momentum conservation faster than energy conservation.
 (can be an unreliable observation).
 
-NOTE: there is some issue with accuracy of energy conservation when using 'inv' potential, not sure why..
-  octave:3> sim_qtreehat(256, 10000, 1e-4, 0, 'inv');
+NOTE: the timestep need to be smaller for the inv potential compared to the log potential
+  octave:3> sim_qtreehat(256, 10000, 1e-5, 0, 'inv');
   octave:4> sim_qtreehat(256, 10000, 1e-4, 0, 'log');
 
 %}
