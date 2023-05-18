@@ -55,12 +55,19 @@ rep.params.epk = 1.73e6 / rep.params.L;    % radius of moon / earth-moon distanc
 rep.params.G = 6.674e-11;  % https://en.wikipedia.org/wiki/Gravitational_constant
 rep.params.potstr = potstr;
 
-% dim of C = pi * params.G * params.M * parms.T^2 / params.L ^ 2;
-% is [1/L] (per meter) which I think is what it should be
-% so there is a time-scale T where this coefficient is exactly 1.
-% this timescale is the time unit in the below simulation.
-
-rep.params.T = sqrt(rep.params.L^2 / (pi * rep.params.G * rep.params.M));
+if strcmp(potstr, 'log')
+  rep.params.T = sqrt(rep.params.L^2 / (pi * rep.params.G * rep.params.M));
+  % dim of C = pi * params.G * params.M * parms.T^2 / params.L ^ 2;
+  % is [1/L] (per meter) which I think is what it should be
+  % so there is a time-scale T where this coefficient is exactly 1.
+  % this timescale is the time unit in the below simulation.
+else 
+  rep.params.T = sqrt(rep.params.L^3 / (rep.params.G * rep.params.M));
+  % for the 1/r potential, this is the timescale T that 
+  % annihilates (sets to 1) the gravitational constant
+  % for the presently used L,M: the time unit is almost 38 days
+  % setting dt=1e-6 then corresponds to about 3.3 real sec per step
+end
 
 Mmax = 1.0;
 Mmin = 0.1 * Mmax;
@@ -116,7 +123,7 @@ if nargout == 0
   set(hl, 'FontSize', 20);
   xlabel('time [seconds]', 'FontSize', 20);
   ylabel('total momentum / total mass', 'FontSize', 20);
-  title(sprintf('N=%i, time-unit=%.4f, Nt=%i, potstr=%s', N, rep.params.T, Nt, rep.params.potstr), 'FontSize', 20);
+  title(sprintf('N=%i, time-unit=%.2e, Nt=%i, potstr=%s', N, rep.params.T, Nt, rep.params.potstr), 'FontSize', 20);
 
   tot = sum(rep.energy, 2);
   avgTot = mean(tot);
@@ -127,7 +134,7 @@ if nargout == 0
   set(hl, 'FontSize', 20);
   xlabel('time [seconds]', 'FontSize', 20);
   ylabel('normalized total energy', 'FontSize', 20);
-  title(sprintf('N=%i, time-unit=%.4f, Nt=%i, potstr=%s', N, rep.params.T, Nt, rep.params.potstr), 'FontSize', 20);
+  title(sprintf('N=%i, time-unit=%.2e, Nt=%i, potstr=%s', N, rep.params.T, Nt, rep.params.potstr), 'FontSize', 20);
 end
 
 end
