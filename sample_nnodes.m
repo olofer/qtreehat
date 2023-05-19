@@ -60,13 +60,23 @@ if nargout == 1
   return;
 end
 
+NB = NaN(N, 1);
+for b = 1:N 
+  NB(b) = bound_nodes(b, maxleaf);
+end
+
 figure;
 plot(NS(:, 1), NS(:, 2), 'Marker', 'o', 'LineStyle', 'none', 'MarkerSize', 8);
 hold on;
-plot(maxleaf:N, 10 + ((maxleaf:N) * 3) / maxleaf, 'LineStyle', '--', 'Color', 'k', 'LineWidth', 2);
+%plot(1:N, ((1:N) * (1 + maxleaf)) / maxleaf, 'LineStyle', '--', 'Color', 'k', 'LineWidth', 2);
+plot(1:N, NB, 'LineStyle', '-', 'Color', 'r', 'LineWidth', 2);
 grid on;
 xlabel('number of points', 'FontSize', FSZ);
 ylabel('number of nodes', 'FontSize', FSZ);
 title(sprintf('%i (%s) samples, using maxleaf = %i', S, distribstr, maxleaf), 'FontSize', FSZ);
 
+end
+
+function NN = bound_nodes(N, L)
+  NN = min([16 / 3, L + 1]) * N/L + 128;
 end

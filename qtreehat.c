@@ -224,6 +224,16 @@ tValueTriad eval_invr_quadrupole_(double X,
   return vt;
 }
 
+int estimateMaxNumNodes(int N, 
+                        int L)
+{
+  const double f1 = 16.0 / 3.0;
+  const double f2 = (double) (L + 1);
+  const double f = (f1 < f2 ? f1 : f2);
+  const double n_ovr_l = ((double) N) / L;
+  return (int) (f * n_ovr_l) + 128;
+}
+
 // Up-to-2nd order moments of the set of source points w.r.t to (refx, refy).
 void calc_source_summary(tMomentStats* m,
                          int npts, 
@@ -857,7 +867,7 @@ void mexFunction(int nlhs,
     return;
   }
 
-  const int maxNumberOfNodes = Np * 4; // (!!! !!! !!!) probably only 2 needed here
+  const int maxNumberOfNodes = estimateMaxNumNodes(Np, maxLeaf);
 
   tPointPayload* pt = THEMALLOC(sizeof(tPointPayload) * Np);
   tPointPayload* pt_scratch = THEMALLOC(sizeof(tPointPayload) * Np);
@@ -902,7 +912,7 @@ void mexFunction(int nlhs,
 
   if (nlhs == 0) {
     THEPRINTF("[%s]: maxLeaf = %i\n", __func__, maxLeaf);
-    THEPRINTF("[%s]: nno = %i\n", __func__, nno);
+    THEPRINTF("[%s]: nno = %i (allocated = %i)\n", __func__, nno, maxNumberOfNodes);
 
     const int nn_in_tree = count_quadtree_nodes(&rootNode);
     THEPRINTF("[%s]: nn_in_tree = %i\n", __func__, nn_in_tree);
@@ -955,4 +965,3 @@ void mexFunction(int nlhs,
 // TODO: switchable level of detail: 0th, 1st, 2nd? i.e. stop at dipole or go full quadrupole?
 // TODO: internally clock the non-allocation steps in the calculations.. return in a 2nd output
 // TODO: review implementation of logr quadrupole (use Xhat, Yhat version?)
-// TODO: what is the maximum possible number of nodes in the quadtree as function of maxleaf and numpoints?
