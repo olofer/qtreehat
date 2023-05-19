@@ -9,6 +9,5 @@ Basic quadtree (2D space) hierarchically arranging quadrupole information for a 
 ## Tasks
 - `qtreehat.c` interface to optionally take target points as arguments
 - separate tests of the value, gradient pair via random line integration
-- split up source code such that the MEX file is clearly seen as a special case
-- use within a N-body WASM/C++/JS interactive animation
-- add clustered test distributions to `sample_nnodes.m`
+- split up source code such that the MEX file is a special case application
+- use within a $N$-body WASM/C++/JS interactive animation

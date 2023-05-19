@@ -50,7 +50,18 @@ for s = 1:S
     XY = 2 * rand(Ns, 2) - 1;
   elseif strcmp(distribstr, 'normal')
     XY = randn(Ns, 2);
+  elseif strcmp(distribstr, 'twogroups')
+    c1 = floor(Ns / 2);
+    c2 = Ns - c1;
+    if c1 >= 1 && c2 >= 1
+      XY = 0.1 * randn(c1, 2) + repmat(rand(1, 2), [c1, 1]);
+      XY = [XY; 0.1 * randn(c2, 2) + repmat(rand(1, 2), [c2, 1])]; 
+    else
+      XY = randn(Ns, 2);
+    end
   end
+  assert(size(XY, 1) == Ns);
+  assert(size(XY, 2) == 2);
   V = rand(Ns, 1);
   [~, nno] = qtreehat(XY(:, 1), XY(:, 2), V, 0.50, maxleaf, 0.0, 'log');
   NS(s, :) = [Ns, nno];
@@ -78,5 +89,6 @@ title(sprintf('%i (%s) samples, using maxleaf = %i', S, distribstr, maxleaf), 'F
 end
 
 function NN = bound_nodes(N, L)
+  % this is the same expression as used in 'qtreehat.c'; more tight bound would be preferred
   NN = min([16 / 3, L + 1]) * N/L + 128;
 end
