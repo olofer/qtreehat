@@ -3,13 +3,15 @@
  *
  * All-to-all interaction evaluation using a point-region
  * quad-tree construction. Matrix-free and mesh-free.
+ * Optionally provide target points (t) separate from sources (p).
  *
  * USAGE: wp = qtreehat(xp, yp, vp, maxleaf, ep, epk, pot);
+ *        wt = qtreehat(xp, yp, vp, maxleaf, ep, epk, pot, xt, yt);
  *
  *   wp(i) = sum_j { vp(j) * log(|r(i) - r(j)|) },    if pot = 'log'
  *   wp(i) = sum_j {-vp(j) / |r(i) - r(j)| },         if pot = 'inv'
  *
- * Set ep <= 0 to compute the exact reference sum.
+ * Set ep <= 0 to compute the exact reference sum (brute force).
  *
  * Set epk > 0 to (roughly) regularize the (very) near field evaluation.
  * If epk = 0, the self-terms are dropped.
@@ -750,6 +752,10 @@ bool isDoubleRealVector(const mxArray* a) {
 #define ARG_EPK      prhs[5]
 #define ARG_POTSTR   prhs[6]
 
+#define NUM_INARGS_T 9
+#define ARG_XT       prhs[7]
+#define ARG_YT       prhs[8]
+
 #define MAX_OUTARGS  2
 #define OUT_WP       plhs[0]
 #define OUT_NNODES   plhs[1]
@@ -759,14 +765,16 @@ void mexFunction(int nlhs,
                  int nrhs, 
                  const mxArray** prhs)
 {
-  if (nrhs != NUM_INARGS) {
-    THEPRINTF("USAGE: wp = qtreehat(xp, yp, vp, maxleaf, ep, epk, pot);\n");
+  if (nrhs != NUM_INARGS && nrhs != NUM_INARGS_T) {
+    THEPRINTF("USAGE: wp = qtreehat(xp, yp, vp, maxleaf, ep, epk, pot [,xt, yt]);\n");
     THEERRMSG("Incorrect number of input arguments provided");
   }
 
   if (nlhs > MAX_OUTARGS) {
     THEERRMSG("Too many output arguments requested.");
   }
+
+  const bool has_separate_targets = (nrhs == NUM_INARGS_T);
 
   if (!isDoubleRealVector(ARG_XP)) {
     THEERRMSG("xp must be a real vector"); 
@@ -797,12 +805,38 @@ void mexFunction(int nlhs,
     THEERRMSG("vp must have the same number of elements as xp, yp"); 
   }
 
+  int nxt = 0;
+  const double* pXT = pXP;
+  const double* pYT = pYP;
+  if (has_separate_targets) {
+    if (!isDoubleRealVector(ARG_XT)) {
+      THEERRMSG("xt must be a real vector"); 
+    }
+
+    nxt = mxGetNumberOfElements(ARG_XT);
+
+    if (!isDoubleRealVector(ARG_YT)) {
+      THEERRMSG("yt must be a real vector"); 
+    }
+
+    if (nxt != mxGetNumberOfElements(ARG_YT)) {
+      THEERRMSG("xt and yt must have same number of elements");
+    }
+
+    pXT = mxGetPr(ARG_XT);
+    pYT = mxGetPr(ARG_YT);
+  }
+
   if (!(isDoubleRealVector(ARG_EP) && mxGetNumberOfElements(ARG_EP) == 1)) {
     THEERRMSG("ep must be a real-valued scalar"); 
   }
 
   const double EP = *mxGetPr(ARG_EP);
   const bool EP_is_valid = (EP > 0.0 & EP < 1.0);
+
+  if (!EP_is_valid && nlhs == 2) {
+    THEERRMSG("Cannot return a second output when ep is out of range (no quadtree is built)");
+  }
 
   if (!(isDoubleRealVector(ARG_MAXLEAF) && mxGetNumberOfElements(ARG_MAXLEAF) == 1)) {
     THEERRMSG("maxleaf must be a real-valued scalar"); 
@@ -832,7 +866,7 @@ void mexFunction(int nlhs,
   const bool use_inv_pot = (strcmp(pot_str, "inv") == 0);
 
   if (!use_inv_pot && !use_log_pot) {
-    THEERRMSG("pot must be either \"log\" or \"inv\" (case insensitive)");
+    THEERRMSG("pot must be either \"log\" or \"inv\" (case sensitive)");
   }
 
   const double epksq = EPK * EPK;
@@ -841,13 +875,14 @@ void mexFunction(int nlhs,
   QuadrupoleFuncPtr qfunc = (use_log_pot ? &eval_logr_quadrupole_ : &eval_invr_quadrupole_);
 
   const int Np = nxp;
-  OUT_WP = mxCreateDoubleMatrix(Np, 3, mxREAL);
+  const int Nt = (has_separate_targets ? nxt : nxp);
+  OUT_WP = mxCreateDoubleMatrix(Nt, 3, mxREAL);
   double* pWP = mxGetPr(OUT_WP);
 
   if (!EP_is_valid) {
-    for (int i = 0; i < Np; i++) {
-      const double xi = pXP[i];
-      const double yi = pYP[i];
+    for (int i = 0; i < Nt; i++) {
+      const double xi = pXT[i];
+      const double yi = pYT[i];
       double sumf = 0.0;
       double sumfx = 0.0;
       double sumfy = 0.0;
@@ -860,8 +895,8 @@ void mexFunction(int nlhs,
         sumfy += vt.grady * pVP[j];
       }
       pWP[i] = sumf;
-      pWP[i + Np] = sumfx;
-      pWP[i + 2 * Np] = sumfy;
+      pWP[i + Nt] = sumfx;
+      pWP[i + 2 * Nt] = sumfy;
     }
 
     return;
@@ -935,9 +970,9 @@ void mexFunction(int nlhs,
   }
 
   const double theta = EP * EP;
-  for (int i = 0; i < Np; i++) {
-    const double xi = pXP[i];
-    const double yi = pYP[i];
+  for (int i = 0; i < Nt; i++) {
+    const double xi = pXT[i];
+    const double yi = pYT[i];
     const tPoint ith_query = {xi, yi};
     const tValueTriad wi = quadtree_sum_at_point(&rootNode, 
                                                  &ith_query, 
@@ -946,8 +981,8 @@ void mexFunction(int nlhs,
                                                  pfunc, 
                                                  qfunc);
     pWP[i] = wi.value;
-    pWP[i + Np] = wi.gradx;
-    pWP[i + 2 * Np] = wi.grady;
+    pWP[i + Nt] = wi.gradx;
+    pWP[i + 2 * Nt] = wi.grady;
   }
 
   THEFREE(pt);
@@ -961,7 +996,6 @@ void mexFunction(int nlhs,
   return;
 }
 
-// TODO: optional set of target points (otherwise evaluate at source points)
 // TODO: switchable level of detail: 0th, 1st, 2nd? i.e. stop at dipole or go full quadrupole?
 // TODO: internally clock the non-allocation steps in the calculations.. return in a 2nd output
 // TODO: review implementation of logr quadrupole (use Xhat, Yhat version?)
