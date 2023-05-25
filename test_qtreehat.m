@@ -37,14 +37,14 @@ if exist('epk', 'var') == 0
 end
 
 t0 = tic;
-Wref = qtreehat(XY(:, 1), XY(:, 2), V, 0.0, maxleaf, epk, potstr);
+Wref = qtreehat(XY(:, 1), XY(:, 2), V, maxleaf, 0.0, epk, potstr);
 t0 = toc(t0);
 
 fprintf(1, 'brute force calc took %f seconds for N = %i random pts\n', t0, N);
 
 for e = 1:numel(epvec)
   t1 = tic;
-  Wapx = qtreehat(XY(:, 1), XY(:, 2), V, epvec(e), maxleaf, epk, potstr);
+  Wapx = qtreehat(XY(:, 1), XY(:, 2), V, maxleaf, epvec(e), epk, potstr);
   t1 = toc(t1);
   speed(e) = t1 / t0;
 
@@ -59,7 +59,7 @@ end
 
 if nargout == 0
   % this final (fast) call prints out stats from the MEX program (to be inspected)
-  qtreehat(XY(:, 1), XY(:, 2), V, epvec(e), maxleaf, epk, potstr);
+  qtreehat(XY(:, 1), XY(:, 2), V, maxleaf, epvec(e), epk, potstr);
 
   figure; 
   plot(log2(epvec), 1./speed, 'LineWidth', 2, 'Marker', 's');

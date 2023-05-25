@@ -140,7 +140,7 @@ end
 end
 
 function [Ax, Ay, Phi] = calc_acceleration(X, Y, M, params)
-  W = qtreehat(X, Y, M, params.ep, params.maxleaf, params.epk, params.potstr);
+  W = qtreehat(X, Y, M, params.maxleaf, params.ep, params.epk, params.potstr);
   Ax = -1.0 * W(:, 2);
   Ay = -1.0 * W(:, 3);
   Phi = W(:, 1);

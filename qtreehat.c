@@ -4,7 +4,7 @@
  * All-to-all interaction evaluation using a point-region
  * quad-tree construction. Matrix-free and mesh-free.
  *
- * USAGE: wp = qtreehat(xp, yp, vp, ep, maxleaf, epk, pot);
+ * USAGE: wp = qtreehat(xp, yp, vp, maxleaf, ep, epk, pot);
  *
  *   wp(i) = sum_j { vp(j) * log(|r(i) - r(j)|) },    if pot = 'log'
  *   wp(i) = sum_j {-vp(j) / |r(i) - r(j)| },         if pot = 'inv'
@@ -745,8 +745,8 @@ bool isDoubleRealVector(const mxArray* a) {
 #define ARG_XP       prhs[0]
 #define ARG_YP       prhs[1]
 #define ARG_VP       prhs[2]
-#define ARG_EP       prhs[3]
-#define ARG_MAXLEAF  prhs[4]
+#define ARG_MAXLEAF  prhs[3]
+#define ARG_EP       prhs[4]
 #define ARG_EPK      prhs[5]
 #define ARG_POTSTR   prhs[6]
 
@@ -760,7 +760,7 @@ void mexFunction(int nlhs,
                  const mxArray** prhs)
 {
   if (nrhs != NUM_INARGS) {
-    THEPRINTF("USAGE: wp = qtreehat(xp, yp, vp, ep, maxleaf, epk, pot);\n");
+    THEPRINTF("USAGE: wp = qtreehat(xp, yp, vp, maxleaf, ep, epk, pot);\n");
     THEERRMSG("Incorrect number of input arguments provided");
   }
 

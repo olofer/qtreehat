@@ -63,7 +63,7 @@ for s = 1:S
   assert(size(XY, 1) == Ns);
   assert(size(XY, 2) == 2);
   V = rand(Ns, 1);
-  [~, nno] = qtreehat(XY(:, 1), XY(:, 2), V, 0.50, maxleaf, 0.0, 'log');
+  [~, nno] = qtreehat(XY(:, 1), XY(:, 2), V, maxleaf, 0.50, 0.0, 'log');
   NS(s, :) = [Ns, nno];
 end
 

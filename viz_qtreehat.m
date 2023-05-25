@@ -2,6 +2,10 @@ function [wp, xg, yg] = viz_qtreehat(Nx, Ny, srctype, potstr)
 %
 % function [wp, xg, yg] = viz_qtreehat(Nx, Ny, srctype, potstr)
 %
+% EXAMPLES:
+%   viz_qtreehat();
+%   viz_qtreehat(400,400,'randn','log');
+%
 
 if nargin == 0 
   Nx = 301;
@@ -44,7 +48,7 @@ else
   error('unrecognized srctype');
 end
 
-wp = qtreehat(xp, yp, vp, ep, maxleaf, epk, potstr);
+wp = qtreehat(xp, yp, vp, maxleaf, ep, epk, potstr);
 
 Wvalue = reshape(wp(:, 1), [Ny, Nx]);
 Wgradx = reshape(wp(:, 2), [Ny, Nx]);
