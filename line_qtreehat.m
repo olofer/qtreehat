@@ -1,6 +1,6 @@
-function line_qtreehat(potstr, N, maxleaf, NL, ep, epk)
+function errs = line_qtreehat(potstr, N, maxleaf, NL, ep, epk)
 %
-% function line_qtreehat(potstr, N, maxleaf, NL, ep, epk)
+% function errs = line_qtreehat(potstr, N, maxleaf, NL, ep, epk)
 %
 % Plot the result of line integrating the potential delta via its gradient
 % compared to its direct evaluation, for a specific accuracy parameter "ep".
@@ -29,6 +29,8 @@ pot_direct = wt(:, 1);
 fs = wt(:, 2) * Vhat(1) + wt(:, 3) * Vhat(2);
 pot_delta = cumtrapz(s, fs);
 pot_via_line = pot_direct(1) + pot_delta;
+
+errs = [max(abs(pot_direct - pot_exact)), max(abs(pot_direct - pot_via_line))] / mean(abs(pot_exact));
 
 figure;
 plot(s, [pot_exact, pot_direct, pot_via_line], 'LineWidth', 3);
