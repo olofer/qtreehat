@@ -5,9 +5,9 @@ Basic quadtree (2D space) hierarchically arranging quadrupole information for a 
 - `test_qtreehat.m` that verifies the operation of the accuracy parameter
 - `viz_qtreehat.m` makes visualizations (impulse and random fields)
 - `sim_qtreehat.m` runs a leapfrog integrated $N$-body simulation
+- `line_qtreehat.m` tests/shows potential delta calc. via gradient line integral
 - `sample_nnodes.m` counts/shows the number of quadtree nodes required 
 
 ## Tasks
-- separate tests of the value, gradient pair via random line integration
 - split up source code such that the `MEX` file is a special case application
 - use within a $N$-body WASM/C++/JS interactive animation
