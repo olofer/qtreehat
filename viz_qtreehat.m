@@ -15,7 +15,7 @@ if nargin == 0
 end
 
 ep = 0.10;
-epk = 0.70 * 2.0 / 300;
+epk = 0.70 * 2.0 / sqrt(Nx * Ny);
 maxleaf = 8;
 
 Xhr = 2.0;  % half range
