@@ -91,10 +91,14 @@ typedef struct tPoint {
   double y;
 } tPoint;
 
+// NOTE: "index" below is only required when the interaction callback is to be used
+//       it is not required to be set for the long-range treecode evaluations
+
 typedef struct tPointPayload {
   double x;
   double y;
   double w;
+  int index; 
 } tPointPayload;
 
 typedef struct tQuadTree {
@@ -691,7 +695,124 @@ double count_average_depth(const tQuadTree* root, double ref) {
   return (dsum / nc);
 }
 
-// TODO: implement init/free functionality for quadtree index, interaction callback, toggleable moment stats
+// Take callback function and apply it to indices j interacting with  (iq, j).
+// It is assumed that the query box centre is set to the actual point with index iq.
+// And the query box half-width should be equal to the kernel support radius.
+
+typedef void (*quadtree_interact_func_ptr)(int, int, void*);
+
+void quadtree_box_interact(const tQuadTree* root,
+                           int iq, 
+                           const tPoint* cq, 
+                           double hwq,
+                           quadtree_interact_func_ptr callb_ij,
+                           void* auxptr)
+{
+  if (!box_overlap_box(&(root->cb), root->hbw, cq, hwq))
+    return;
+
+  if (root->p != NULL) {
+    for (int j = 0; j < root->npts; j++) {
+      if (point_inside_box(root->p[j].x, root->p[j].y, cq, hwq)) {
+        (*callb_ij)(iq, root->p[j].index, auxptr);
+      }
+    }
+    return;
+  }
+
+  const tQuadTree* child[4] = {root->pp, root->pm, root->mm, root->mp};
+
+  for (int c = 0; c < 4; c++) {
+    if (child[c] != NULL) {
+      quadtree_box_interact(child[c], iq, cq, hwq, callb_ij, auxptr);
+    }
+  }
+
+  return;
+}
+
+//
+// boilerplate "interface" code for setting up, using, and freeing
+//
+
+typedef struct tQuadTreeIndex {
+  int numpts;
+  int maxnodes;
+  tPointPayload* pt;
+  tPointPayload* pt_scratch;
+  tQuadTree* nodes_store;
+  tQuadTree root;
+} tQuadTreeIndex;
+
+bool allocateQuadTreeIndex(tQuadTreeIndex* qti, 
+                           int size,
+                           int leafsize) 
+{
+  memset(qti, 0, sizeof(tQuadTreeIndex));
+
+  qti->numpts = size;
+  qti->maxnodes = (leafsize <= 0 ? estimateMaxNumNodes(size, 1) : estimateMaxNumNodes(size, leafsize)); 
+
+  qti->pt = THEMALLOC(sizeof(tPointPayload) * qti->numpts);
+  qti->pt_scratch = THEMALLOC(sizeof(tPointPayload) * qti->numpts);
+  qti->nodes_store = THEMALLOC(sizeof(tQuadTree) * qti->maxnodes);
+
+  return (qti->pt != NULL && 
+          qti->pt_scratch != NULL && 
+          qti->nodes_store != NULL);
+}
+
+void freeQuadTreeIndex(tQuadTreeIndex* qti) {
+  if (qti->pt != NULL) THEFREE(qti->pt);
+  if (qti->pt_scratch != NULL) THEFREE(qti->pt_scratch);
+  if (qti->nodes_store != NULL) THEFREE(qti->nodes_store);
+
+  memset(qti, 0, sizeof(tQuadTreeIndex));
+}
+
+// qti->pt assumed to be preloaded with point data
+// qti->root assumed to be preloaded with initial & correct bounding box/square
+int rebuildQuadTreeIndex(tQuadTreeIndex* qti,
+                         int maxInLeaf,
+                         int maxDepth)
+{
+  // FIXME: computing the moment stats during build should be optional
+  const int rootLevel = 0;
+  const int nno = build_quadtree(&qti->root, 
+                                 maxInLeaf, 
+                                 maxDepth, 
+                                 rootLevel, 
+                                 qti->numpts, 
+                                 qti->pt, 
+                                 qti->pt_scratch, 
+                                 qti->maxnodes, 
+                                 qti->nodes_store);
+  return nno;
+}
+
+bool initializeQuadTreeRootBox(tQuadTreeIndex* qti,
+                               double xmin,
+                               double xmax,
+                               double ymin,
+                               double ymax)
+{
+  if (xmin >= xmax || ymin >= ymax)
+    return false;
+
+  const double hbwx = (xmax - xmin) / 2.0;
+  const double hbwy = (ymax - ymin) / 2.0;
+  const double cbx = (xmin + xmax) / 2.0;
+  const double cby = (ymin + ymax) / 2.0;
+  const double eps_mult = 1.0e-10;
+
+  qti->root.cb.x = cbx;
+  qti->root.cb.y = cby;
+  qti->root.hbw = (hbwx > hbwy ? hbwx : hbwy);
+  qti->root.hbw *= (1.0 + eps_mult);
+
+  return true;
+}
+
 // TODO: switchable level of detail: 0th, 1st, 2nd? i.e. stop at dipole or go full quadrupole?
 // TODO: review implementation of logr quadrupole (use Xhat, Yhat version?)
 
