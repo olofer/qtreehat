@@ -227,16 +227,18 @@ void mexFunction(int nlhs,
     return;
   }
 
-  const int maxNumberOfNodes = estimateMaxNumNodes(Np, maxLeaf);
-
-  tPointPayload* pt = THEMALLOC(sizeof(tPointPayload) * Np);
-  tPointPayload* pt_scratch = THEMALLOC(sizeof(tPointPayload) * Np);
-  tQuadTree* nodes = THEMALLOC(sizeof(tQuadTree) * maxNumberOfNodes);
+  tQuadTreeIndex qti;
+  
+  if (!allocateQuadTreeIndex(&qti, Np, maxLeaf)) {
+    freeQuadTreeIndex(&qti);
+    THEERRMSG("quadtree allocation failure");
+  }
   
   double xmin = pXP[0];
   double xmax = pXP[0];
   double ymin = pYP[0];
   double ymax = pYP[0];
+  tPointPayload* pt = qti.pt;
   for (int i = 0; i < Np; i++) {
     pt[i].x = pXP[i];
     pt[i].y = pYP[i];
@@ -247,51 +249,35 @@ void mexFunction(int nlhs,
     ymax = (pYP[i] > ymax ? pYP[i] : ymax);
   }
 
-  const double hbwx = (xmax - xmin) / 2.0;
-  const double hbwy = (ymax - ymin) / 2.0;
-
-  tQuadTree rootNode;
-  rootNode.cb.x = (xmin + xmax) / 2.0;
-  rootNode.cb.y = (ymin + ymax) / 2.0;
-  rootNode.hbw = (hbwx > hbwy ? hbwx : hbwy);
-  rootNode.hbw *= (1.0 + 1.0e-10);
+  initializeQuadTreeRootBox(&qti, xmin, xmax, ymin, ymax);
 
   const int maxDepth = 50;
-  const int maxInLeaf = maxLeaf;
-  const int rootLevel = 0;
+  const int nno = rebuildQuadTreeIndex(&qti, maxLeaf, maxDepth);
 
-  int nno = build_quadtree(&rootNode, 
-                           maxInLeaf, 
-                           maxDepth, 
-                           rootLevel, 
-                           Np, 
-                           pt, 
-                           pt_scratch, 
-                           maxNumberOfNodes, 
-                           nodes);
+  const tQuadTree* proot = &qti.root;
 
   if (nlhs == 0) {
     THEPRINTF("[%s]: maxLeaf = %i\n", __func__, maxLeaf);
-    THEPRINTF("[%s]: nno = %i (allocated = %i)\n", __func__, nno, maxNumberOfNodes);
+    THEPRINTF("[%s]: nno = %i (allocated = %i)\n", __func__, nno, qti.maxnodes);
 
-    const int nn_in_tree = count_quadtree_nodes(&rootNode);
+    const int nn_in_tree = count_quadtree_nodes(proot);
     THEPRINTF("[%s]: nn_in_tree = %i\n", __func__, nn_in_tree);
 
-    const int n_in_tree = count_quadtree_points(&rootNode);
+    const int n_in_tree = count_quadtree_points(proot);
     THEPRINTF("[%s]: n_in_tree = %i\n", __func__, n_in_tree);
 
-    int total_box_count = quadtree_box_query_count(&rootNode, &(rootNode.cb), rootNode.hbw);
+    int total_box_count = quadtree_box_query_count(proot, &(qti.root.cb), qti.root.hbw);
     THEPRINTF("[%s]: n_in_tree (total box query) = %i\n", __func__, total_box_count);
 
-    const int max_depth = count_maximum_depth(&rootNode, 0);
+    const int max_depth = count_maximum_depth(proot, 0);
     THEPRINTF("[%s]: max_depth = %i (zero is root)\n", __func__, max_depth);
 
-    const double avg_depth = count_average_depth(&rootNode, 0.0);
+    const double avg_depth = count_average_depth(proot, 0.0);
     THEPRINTF("[%s]: avg_depth = %f (zero is root)\n", __func__, avg_depth);
 
     tMomentStats refstats;
-    calc_source_summary(&refstats, Np, pt, rootNode.cb.x, rootNode.cb.y);
-    compare_summaries(&refstats, &(rootNode.stats));
+    calc_source_summary(&refstats, Np, pt, qti.root.cb.x, qti.root.cb.y);
+    compare_summaries(&refstats, &(qti.root.stats));
   }
 
   const double theta = EP * EP;
@@ -299,7 +285,7 @@ void mexFunction(int nlhs,
     const double xi = pXT[i];
     const double yi = pYT[i];
     const tPoint ith_query = {xi, yi};
-    const tValueTriad wi = quadtree_sum_at_point(&rootNode, 
+    const tValueTriad wi = quadtree_sum_at_point(proot, 
                                                  &ith_query, 
                                                  theta, 
                                                  epksq, 
@@ -310,9 +296,7 @@ void mexFunction(int nlhs,
     pWP[i + 2 * Nt] = wi.grady;
   }
 
-  THEFREE(pt);
-  THEFREE(pt_scratch);
-  THEFREE(nodes);
+  freeQuadTreeIndex(&qti);
 
   if (nlhs == 2) {
     OUT_NNODES = mxCreateDoubleScalar((double)(nno + 1));

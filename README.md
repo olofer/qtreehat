@@ -4,10 +4,11 @@ Basic quadtree (2D space) hierarchically arranging quadrupole information for a 
 ## Tests & demos
 - `test_qtreehat.m` that verifies the operation of the accuracy parameter
 - `viz_qtreehat.m` makes visualizations (impulse and random fields)
-- `sim_qtreehat.m` runs a leapfrog integrated $N$-body simulation
+- `sim_qtreehat.m` runs a leapfrog integrated $N$-body simulation (energy conservation test)
 - `line_qtreehat.m` tests/shows potential delta calc. via gradient line integral
 - `sample_nnodes.m` counts/shows the number of quadtree nodes required 
 
 ## Tasks
-- make a non-`MEX` smoke test executable (built via `gcc -Wall`)
+- make a non-`MEX` smoke test executable (built via `gcc -Wall`); test nearest-neighbor indexing
+- verify separate test executable with `valgrind` 
 - use within a $N$-body WASM/C++/JS interactive animation
