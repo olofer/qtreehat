@@ -9,5 +9,5 @@ Basic quadtree (2D space) hierarchically arranging quadrupole information for a 
 - `sample_nnodes.m` counts/shows the number of quadtree nodes required 
 
 ## Tasks
-- split up source code such that the `MEX` file is a special case application
+- make a non-`MEX` smoke test executable (built via `gcc -Wall`)
 - use within a $N$-body WASM/C++/JS interactive animation
