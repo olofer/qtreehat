@@ -30,4 +30,4 @@ done
 echo "*** CORRECTNESS: DONE ***" >> test-index.log
 
 # Build Octave executable (used in Octave test codes)
-octave --eval "build_mex('qtreehat');"
+octave --silent --no-window-system --no-history --eval "build_mex('qtreehat');"

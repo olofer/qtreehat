@@ -12,10 +12,9 @@ Run `./build-run-tests.sh` to compile and run basic smoke tests. Only checked un
 - `sample_nnodes.m` counts/shows the number of quadtree nodes required 
 
 ## Tasks
-- (kernel-independent) FMM extension?
-- C++ interface?
+- templated C++ interface?
 - use within a $N$-body WASM/C++/JS interactive animation (SPH + gravity)
-- can it be extended for Helmholtz problems?
+- (kernel-independent) FMM extension?
 
 ## References
 This treecode is an extension of the quadtree used here:
