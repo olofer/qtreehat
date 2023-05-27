@@ -1,10 +1,10 @@
 # qtreehat
-Basic quadtree (2D space) hierarchically arranging quadrupole information for a set of weights and coordinates. The `MEX` interface has the ability to evaluate either all-to-all or all-to-targets meshless summations, for either $log(r)$ (or $-1/r$) potentials between points (same quadtree, different evaluations). The calculation of the field gradients is always done as a side result. 
+Basic quadtree (2D space) hierarchically arranging quadrupole information for a set of weights and coordinates. The `MEX` interface has the ability to evaluate either all-to-all or all-to-targets meshless summations, for either $\sim \log(r)$ (or $\sim -1/r$) potentials between points (same quadtree, different evaluations). The calculation of the field gradients is always done as a side result. 
 
 ## Build & sanity check
-Run `./build-run-tests.sh` to compile and run basic smoke tests. Only checked under `WSL2` and requires both `gcc` and `clang` to be installed on the system, as well as `octave`.
+Run `./build-run-tests.sh` to compile and run basic smoke tests. Only checked under `WSL2` and requires both `gcc` and `clang` to be installed on the system, as well as `valgrind` and `octave`. To build only the `MEX` interface from within `octave` (or `matlab`, but this is not tested) type `build_mex('qtreehat');`.
 
-## Tests & demos
+## Functional tests & demos
 - `test_qtreehat.m` that verifies the operation of the accuracy parameter
 - `viz_qtreehat.m` makes visualizations (impulse and random fields)
 - `sim_qtreehat.m` runs a leapfrog integrated $N$-body simulation (energy conservation test)

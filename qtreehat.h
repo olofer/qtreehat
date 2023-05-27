@@ -695,6 +695,37 @@ double count_average_depth(const tQuadTree* root, double ref) {
   return (dsum / nc);
 }
 
+int count_maximum_in_leaf(const tQuadTree* root) {
+  if (root->p != NULL)
+    return root->npts;
+  const tQuadTree* child[4] = {root->pp, root->pm, root->mm, root->mp};
+  int leafmax = 0;
+  for (int c = 0; c < 4; c++) {
+    if (child[c] == NULL)
+      continue;
+    const int max_in_c = count_maximum_in_leaf(child[c]);
+    if (max_in_c > leafmax)
+      leafmax = max_in_c;
+  }
+  return leafmax;
+}
+
+double count_average_in_leaf(const tQuadTree* root) {
+  if (root->p != NULL)
+    return (double) root->npts;
+  const tQuadTree* child[4] = {root->pp, root->pm, root->mm, root->mp};
+  double leafsum = 0.0;
+  int nc = 0;
+  for (int c = 0; c < 4; c++) {
+    if (child[c] == NULL)
+      continue;
+    const double avg_in_c = count_average_in_leaf(child[c]);
+    leafsum += avg_in_c;
+    nc++;
+  }
+  return leafsum / nc;
+}
+
 // Take callback function and apply it to indices j interacting with  (iq, j).
 // It is assumed that the query box centre is set to the actual point with index iq.
 // And the query box half-width should be equal to the kernel support radius.
