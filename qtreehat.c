@@ -249,7 +249,22 @@ void mexFunction(int nlhs,
     ymax = (pYP[i] > ymax ? pYP[i] : ymax);
   }
 
-  initializeQuadTreeRootBox(&qti, xmin, xmax, ymin, ymax);
+  if (xmin == xmax) {
+    const double xinc = (1.0 + fabs(xmin)) * 1.0e-10;
+    xmin -= xinc;
+    xmax += xinc;
+  }
+
+  if (ymin == ymax) {
+    const double yinc = (1.0 + fabs(ymin)) * 1.0e-10;
+    ymin -= yinc;
+    ymax += yinc;
+  }
+
+  if (!initializeQuadTreeRootBox(&qti, xmin, xmax, ymin, ymax)) {
+    freeQuadTreeIndex(&qti);
+    THEERRMSG("quadtree root box bounds failure");
+  }
 
   const int maxDepth = 50;
   const int nno = rebuildQuadTreeIndex(&qti, maxLeaf, maxDepth);

@@ -10,6 +10,7 @@ Run `./build-run-tests.sh` to compile and run basic smoke tests. Only checked un
 - `sim_qtreehat.m` runs a leapfrog integrated $N$-body simulation (energy conservation test)
 - `line_qtreehat.m` tests/shows potential delta calc. via gradient line integral
 - `sample_nnodes.m` counts/shows the number of quadtree nodes required 
+- `pfgm_qtreehat.m` crude demonstration of Poisson Flow Generative Modeling (in 1D)
 
 ## Tasks
 - templated C++ interface?
