@@ -5,6 +5,10 @@
 
 #include "qtreehat.h"
 
+constexpr double thetaFromFarness(double ep) {
+  return ep * ep;
+}
+
 constexpr int estMaxNodes(int N, int L)
 {
   if (L <= 0) L = 1;

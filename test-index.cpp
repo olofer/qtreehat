@@ -3,13 +3,14 @@
  * Similar to test-index.c but goes a little further and also tests the target point eval() member.
  * 
  * BUILD: g++ -std=c++14 -Wall -o test-index++.exe -O2 test-index.cpp
- *
+ *        clang++ -std=c++14 -Wall -o test-index++.exe -O2 test-index.cpp
  */
 
 
 #include <iostream>
 #include <random>
 
+#include <cmath>
 #include <cstring>  // for std::memset()
 #include <vector>
 
@@ -147,6 +148,44 @@ int main(int argc,
   qtHandle.setLogPotential();
 
   std::vector<tValueTriad> referenceValues(numpts);
+
+  const double theta_ref = 1.0e-12;
+  const double epksq = 1.0e-8;
+  double reference_sum = 0.0; 
+
+  for (int i = 0; i < numpts; i++)
+  {
+    referenceValues[i] = qtHandle.evaluateTarget(qtHandle.pt_scratch[i].x, 
+                                                 qtHandle.pt_scratch[i].y, 
+                                                 theta_ref, 
+                                                 epksq);
+    
+    reference_sum += std::fabs(referenceValues[i].value);
+  }
+
+  std::vector<tValueTriad> testValues(numpts);
+  const std::vector<double> ep_tests = {1.0 / 256, 1.0 / 128, 1.0 / 64, 1.0 / 32, 1.0 / 16, 1.0 / 8, 1.0 / 4, 1.0 / 2};
+
+  // Recall that "ep" can be regarded as the (region size) / (distance to region) ratio; and "theta" is its square
+
+  for (double ep : ep_tests)
+  {
+    const double theta = thetaFromFarness(ep); // ep * ep;
+    std::cout << "theta = " << theta << " (ep = " << ep << ")";
+
+    double error_sum = 0.0;
+    for (int i = 0; i < numpts; i++)
+    {
+      testValues[i] = qtHandle.evaluateTarget(qtHandle.pt_scratch[i].x, 
+                                              qtHandle.pt_scratch[i].y, 
+                                              theta, 
+                                              epksq);
+      
+      error_sum += std::fabs(testValues[i].value - referenceValues[i].value);
+    }
+
+    std::cout << "; error = " << error_sum / reference_sum << std::endl;
+  }
 
   return 0;
 }
