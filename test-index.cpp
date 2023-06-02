@@ -1,129 +1,47 @@
-// BUILD: g++ -std=c++14 -Wall -o test-index++.exe -O2 test-index.cpp
+/*
+ * Basic test of C++ interface for fixed-maximum-size (by template parameters) treecode.
+ * Similar to test-index.c but goes a little further and also tests the target point eval() member.
+ * 
+ * BUILD: g++ -std=c++14 -Wall -o test-index++.exe -O2 test-index.cpp
+ *
+ */
 
-// TODO: verify that the tree works for variable number of points N, as long as N <= NMAX @ fixed allocation
 
 #include <iostream>
 #include <random>
 
 #include <cstring>  // for std::memset()
+#include <vector>
 
-#define _QTREEHAT_NOINDEX_
-#define _QTREEHAT_NOPRINTF_
-#include "qtreehat.h"
+#include "qtreehat.hpp"
 
-constexpr int estMaxNodes(int N, int L)
+void enumerateFunction(int i, 
+                       int j, 
+                       void* aux)
 {
-  if (L <= 0) L = 1;
-  const double f1 = 16.0 / 3.0;
-  const double f2 = (double) (L + 1);
-  const double f = (f1 < f2 ? f1 : f2);
-  const double n_ovr_l = ((double) N) / L;
-  return (int) (f * n_ovr_l) + 128;
+  if (aux == nullptr) return;
+  uint32_t* histo = (uint32_t *) aux;
+  histo[j]++;
 }
 
-template <int N, int L, int M = estMaxNodes(N, L)>
-struct tQuadTreeHandle
+void count_all_inside(const tPointPayload* pt, 
+                      int n,
+                      std::vector<uint32_t>& histo,
+                      double xmin,
+                      double xmax,
+                      double ymin,
+                      double ymax)
 {
-  tPointPayload pt[N];
-  tPointPayload pt_scratch[N];
-  tQuadTree nodes_store[M];
-  tQuadTree root;
-
-  PotentialFuncPtr pfunc;
-  QuadrupoleFuncPtr qfunc;
-
-  void setLogPotential() {
-    pfunc = &logr_potential_;
-    qfunc = &eval_logr_quadrupole_;
+  for (int i = 0; i < n; i++) {
+    const double xi = pt[i].x;
+    const double yi = pt[i].y;
+    const bool x_inside = (xi >= xmin && xi < xmax);
+    const bool y_inside = (yi >= ymin && yi < ymax);
+    if (x_inside && y_inside) {
+      histo[i]++;
+    }
   }
-
-  void setInvPotential() {
-    pfunc = &invr_potential_;
-    qfunc = &eval_invr_quadrupole_;
-  }
-
-  int capacityNodes() const { return M; }
-  int capacityPoints() const { return N; }
-  int capacityLeaf() const { return L; }
-
-  bool init(double xmin, 
-            double xmax, 
-            double ymin, 
-            double ymax) 
-  {
-    if (xmin >= xmax || ymin >= ymax) return false;
-
-    const double hbwx = (xmax - xmin) / 2.0;
-    const double hbwy = (ymax - ymin) / 2.0;
-    const double cbx = (xmin + xmax) / 2.0;
-    const double cby = (ymin + ymax) / 2.0;
-    const double eps_mult = 1.0e-10;
-
-    root.cb.x = cbx;
-    root.cb.y = cby;
-    root.hbw = (hbwx > hbwy ? hbwx : hbwy);
-    root.hbw *= (1.0 + eps_mult);
-
-    return true;
-  }
-
-  int rebuild(int numpts, 
-              int maxDepth = 50) 
-  {
-    if (numpts <= 0 || numpts > N) return 0;
-
-    const int rootLevel = 0;
-    const int nno = build_quadtree(&root, 
-                                   L, 
-                                   maxDepth, 
-                                   rootLevel, 
-                                   numpts, 
-                                   pt, 
-                                   pt_scratch, 
-                                   M, 
-                                   nodes_store);
-    return nno;
-  }
-
-  int maximum_leafsize() const {
-    return count_maximum_in_leaf(&root);
-  }
-
-  double average_leafsize() const {
-    return count_average_in_leaf(&root);
-  }
-
-  int maximum_depth() const {
-    return count_maximum_depth(&root, 0);
-  }
-
-  double average_depth() const {
-    return count_average_depth(&root, 0);
-  }
-
-  int countPoints() const {
-    return count_quadtree_points(&root);
-  }
-
-  int countNodes() const {
-    return count_quadtree_nodes(&root);
-  }
-
-  tValueTriad evaluateTarget(double x, 
-                             double y,
-                             double theta,
-                             double epksq) const 
-  {
-    const tPoint ith_query = {x, y};
-    const tValueTriad triad = quadtree_sum_at_point(&root, 
-                                                    &ith_query, 
-                                                    theta, 
-                                                    epksq, 
-                                                    pfunc, 
-                                                    qfunc);
-    return triad;
-  }
-};
+}
 
 int main(int argc, 
          const char** argv)
@@ -145,6 +63,8 @@ int main(int argc,
   const int NMAX = 25000;
   const int LEAF = 8;
 
+  std::cout << "template parameters N, L = " << NMAX << ", " << LEAF << std::endl;
+
   if (numpts <= 0 || numpts > NMAX || D <= 0.0 || qhw <= 0.0) {
     std::cout << "infeasible argments" << std::endl;
     return 1;
@@ -157,10 +77,6 @@ int main(int argc,
     qtHandle.pt[i].x = D * Uniform(gen) - D / 2.0;
     qtHandle.pt[i].y = D * Uniform(gen) - D / 2.0;
     qtHandle.pt[i].w = Normal(gen);
-
-    if (i == numpts - 1) {
-      std::cout << "w[" << i << "] = " << qtHandle.pt[i].w << std::endl;
-    }
   }
 
   const double xmin = -D / 2.0;
@@ -176,10 +92,61 @@ int main(int argc,
   std::cout << "<leafsize> = " << qtHandle.average_leafsize() << " (maximum = " << qtHandle.maximum_leafsize() << ")" << std::endl;
   std::cout << "   <depth> = " << qtHandle.average_depth()    << " (maximum = " << qtHandle.maximum_depth() << ")" << std::endl;
 
-  // TODO: test a subsample of target evaluations ...
+  // Run a brute force test of nearest-neighbor detection  
+  std::vector<uint32_t> H0(numpts, 0);
+  std::vector<uint32_t> H1(numpts, 0);
+
+  std::cout << "brute force testing of interaction search box ..." << std::endl;
+
+  qtHandle.restore_scratch_in_original_order(numpts);
+
+  const double query_box_halfwidth = qhw;
+
+  for (int i = 0; i < numpts; i++) {
+    const tPoint query_pt_i = {qtHandle.pt_scratch[i].x, qtHandle.pt_scratch[i].y};
+    const int index_query_i = i;
+
+    quadtree_box_interact(&qtHandle.root,
+                          index_query_i, 
+                          &query_pt_i, 
+                          query_box_halfwidth,
+                          &enumerateFunction,
+                          reinterpret_cast<void *>(H0.data()));
+
+    count_all_inside(qtHandle.pt_scratch, 
+                     numpts, 
+                     H1, 
+                     query_pt_i.x - query_box_halfwidth, 
+                     query_pt_i.x + query_box_halfwidth,
+                     query_pt_i.y - query_box_halfwidth, 
+                     query_pt_i.y + query_box_halfwidth);
+
+    const bool is_still_equal = (memcmp(H0.data(), H1.data(), sizeof(uint32_t) * numpts) == 0);
+
+    if (!is_still_equal) {
+      std::cout << "interaction error @ " << i << std::endl;
+      return -1;
+    }
+  }
+
+  uint32_t hmin = 1000000000;
+  uint32_t hmax = 0;
+  for (int i = 0; i < numpts; i++) {
+    if (H0[i] < 1) {
+      std::cout << "never self interacted @ " << i << std::endl;
+      return -2;
+    }
+    if (H0[i] < hmin) hmin = H0[i];
+    if (H0[i] > hmax) hmax = H0[i];
+  }
+  std::cout << "histogram min, max = " << hmin << ", " << hmax << std::endl;
+
+  // Check accuracy of tree code evaluation as controlled by the theta parameter
+
+  std::cout << "brute force testing target point evaluation accuracies ..." << std::endl;
   qtHandle.setLogPotential();
 
-  // TODO: run the test query for correctness ...
+  std::vector<tValueTriad> referenceValues(numpts);
 
   return 0;
 }
