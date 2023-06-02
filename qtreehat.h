@@ -12,17 +12,23 @@
   The sums are built up hierarchically; children nodes are merged using translation rules + direct sums.
 */
 
-#ifndef THEMALLOC
-#define THEMALLOC malloc
+#ifndef _QTREEHAT_NOINDEX_
+  #ifndef THEMALLOC
+    #define THEMALLOC malloc
+  #endif
+  #ifndef THEFREE
+    #define THEFREE   free
+  #endif
 #endif
 
-#ifndef THEFREE
-#define THEFREE   free
+#ifndef _QTREEHAT_NOPRINTF_
+  #ifndef THEPRINTF
+    #define THEPRINTF printf
+  #endif
 #endif
 
-#ifndef THEPRINTF
-#define THEPRINTF printf
-#endif
+// TODO: switchable level of detail: 0th, 1st, 2nd? i.e. stop at dipole or go full quadrupole?
+// TODO: review implementation of logr quadrupole (use Xhat, Yhat version?)
 
 typedef struct tValueTriad {
   double value;
@@ -252,6 +258,8 @@ void add_source_translation(tMomentStats* m,
   return;
 }
 
+#ifndef _QTREEHAT_NOPRINTF_
+
 void compare_summaries(const tMomentStats* S1,
                        const tMomentStats* S2)
 {
@@ -263,6 +271,8 @@ void compare_summaries(const tMomentStats* S1,
   THEPRINTF("[%s]: S1.wxy, S2.wxy = %e, %e\n", __func__, S1->wxy, S2->wxy);
   THEPRINTF("[%s]: S1.wyy, S2.wyy = %e, %e\n", __func__, S1->wyy, S2->wyy);
 }
+
+#endif
 
 // upper borders excluded from "inside"
 bool point_inside_box(double px, 
@@ -315,7 +325,6 @@ tValueTriad quadtree_leafsum_(const tQuadTree* root,
 {
   tValueTriad sum = {0.0, 0.0, 0.0};
   for (int i = 0; i < root->npts; i++) {
-    //const tValueTriad vt = logr_potential_(target->x, target->y, root->p[i].x, root->p[i].y, epsq);
     const tValueTriad vt = (*pfunc)(target->x, target->y, root->p[i].x, root->p[i].y, epsq);
     const double weight = root->p[i].w;
     sum.value += vt.value * weight;
@@ -428,7 +437,6 @@ int build_quadtree(tQuadTree* root,
     root->npts = np;
     root->p = point;
     calc_source_summary(&(root->stats), root->npts, root->p, root->cb.x, root->cb.y);
-    //THEPRINTF("[%s]: cbx, cby, hbw = %f, %f, %f (leaf, np = %i)\n", __func__, root->cb.x, root->cb.y, root->hbw, root->npts);
     return 0;
   }
 
@@ -476,9 +484,6 @@ int build_quadtree(tQuadTree* root,
 
   // reset the stats for the non-leaf nodes; aggregate child stats below
   memset(&(root->stats), 0 , sizeof(tMomentStats));
-
-  /*THEPRINTF("[%s]: pp, pm, mm, mp = %i, %i, %i, %i (sum = %i)\n", 
-    __func__, n_1st, n_2nd, n_3rd, n_4th, n_1st + n_2nd + n_3rd + n_4th); */
 
   const double hhbw = root->hbw / 2.0;
 
@@ -762,6 +767,8 @@ void quadtree_box_interact(const tQuadTree* root,
   return;
 }
 
+#ifndef _QTREEHAT_NOINDEX_
+
 //
 // boilerplate "interface" code for setting up, using, and freeing
 //
@@ -844,7 +851,6 @@ bool initializeQuadTreeRootBox(tQuadTreeIndex* qti,
   return true;
 }
 
-// TODO: switchable level of detail: 0th, 1st, 2nd? i.e. stop at dipole or go full quadrupole?
-// TODO: review implementation of logr quadrupole (use Xhat, Yhat version?)
+#endif  // not "no index"
 
 #endif
