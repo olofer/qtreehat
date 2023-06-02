@@ -13,9 +13,10 @@ Run `./build-run-tests.sh` to compile and run basic smoke tests. Only checked un
 - `pfgm_qtreehat.m` crude demonstration of Poisson Flow Generative Modeling (in 1D)
 
 ## Tasks
-- templated C++ interface?
+- `WIP`: templated fixed-size C++ interface? `constexpr` powered!
 - use within a $N$-body WASM/C++/JS interactive animation (SPH + gravity)
 - (kernel-independent) FMM extension?
+- Octtree variant of the code (at some future time, maybe)
 
 ## References
 This treecode is an extension of the quadtree used here:
