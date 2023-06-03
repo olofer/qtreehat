@@ -12,7 +12,17 @@ WebAssembly.instantiateStreaming(fetch('ggas.wasm'), importObject)
 {
     var getParticleX = results.instance.exports.getParticleX;
     var getParticleY = results.instance.exports.getParticleY;
+    var getParticleRho = results.instance.exports.getParticleRho;
     var initializeUniformly = results.instance.exports.initializeUniformly;
+    var rebuildTree = results.instance.exports.rebuildTree;
+    var computeDensityAndDot = results.instance.exports.computeDensityAndDot;
+    var eulerTimestep = results.instance.exports.eulerTimestep;
+    var boundaryReflection = results.instance.exports.boundaryReflection;
+
+    var numParticles = 3456;
+    
+    const M0 = 1.0 / numParticles;
+    const U0 = 1.0;
 
     function keyDownEvent(e)
     {
@@ -20,10 +30,15 @@ WebAssembly.instantiateStreaming(fetch('ggas.wasm'), importObject)
         var key = e.key;
 
         if (key == 'r' || key == 'R') {
-            initializeUniformly(numParticles, 1.0, 0.0, width, 0.0, height);
+            initializeUniformly(numParticles, M0, U0, 0.0, width, 0.0, height);
+        }
+
+        if (key == 'd' || key == 'D') {
+            console.log(getParticleRho(0));
         }
 
         // TODO: add particle / remove particle..
+        // TODO: toggle periodic?
     }
 
     const twoPi = 2.0 * Math.PI;
@@ -42,12 +57,9 @@ WebAssembly.instantiateStreaming(fetch('ggas.wasm'), importObject)
     
     const betaFPSfilter = 1.0 / 100.0;
     var filteredFPS = 0.0;
-
     var showStats = true;
 
-    var numParticles = 3456;
-
-    initializeUniformly(numParticles, 1.0, 0.0, width, 0.0, height);
+    initializeUniformly(numParticles, M0, U0, 0.0, width, 0.0, height);
    
     function main()
     {
@@ -84,6 +96,11 @@ WebAssembly.instantiateStreaming(fetch('ggas.wasm'), importObject)
             ctx.fillText('wall time = ' + time.toFixed(3) + ' [s], <fps> = ' + filteredFPS.toFixed(1), 10.0, height - 10.0);
             ctx.fillText('particles = ' + numParticles, 10.0, 10.0);
         }
+
+        rebuildTree(numParticles);
+        computeDensityAndDot(numParticles);
+        boundaryReflection(numParticles, 0.0, width, 0.0, height);
+        eulerTimestep(numParticles, 0.50);
 
         window.requestAnimationFrame(main);
     }
