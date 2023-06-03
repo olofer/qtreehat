@@ -15,6 +15,8 @@
 
 const double gas_gamma = 5.0 / 3.0;
 
+const double nearfield_epksq = 1.0e-6;
+
 const double sph_kernel_h = 5.0;
 const double sph_kernel_radius = sph_kernel_h * 2.0;
 
@@ -59,11 +61,13 @@ struct tParticle {
   double p;
   double vx;
   double vy;
+  double phi;
   double udot;
   double vxdot;
   double vydot;
 };
 
+static double time;
 static tParticle particle[NMAX];
 static tQuadTreeHandle<NMAX, LEAF> qtree;
 
@@ -133,6 +137,12 @@ void initializeUniformly(int n,
     particle[i].vx = 0.0;
     particle[i].vy = 0.0;
   }
+  time = 0.0;
+}
+
+EMSCRIPTEN_KEEPALIVE
+double getTime(void) {
+  return time;
 }
 
 EMSCRIPTEN_KEEPALIVE
@@ -177,7 +187,16 @@ void rebuildTree(int n) {
 }
 
 EMSCRIPTEN_KEEPALIVE
-void computeDensityAndDot(int n) {
+void setPotentialType(int t) {
+  if (t == 0) qtree.setLogPotential();
+    else qtree.setInvPotential();
+}
+
+EMSCRIPTEN_KEEPALIVE
+void computeDensityAndDot(int n, 
+                          double G, 
+                          double accuracy)
+{
   const double gamma_minus_one = gas_gamma - 1.0;
 
   for (int i = 0; i < n; i++) {
@@ -195,10 +214,21 @@ void computeDensityAndDot(int n) {
     const tPoint queryi = {particle[i].x, particle[i].y};
     quadtree_box_interact(&qtree.root, i, &queryi, sph_kernel_radius, 
                           &dot_summation_callback, reinterpret_cast<void *>(particle));
-    // ...
-    // TODO: here also apply tree code to ALSO compute long-range interaction
-    // ...
   } 
+
+  if (G <= 0) {
+    for (int i = 0; i < n; i++)
+      particle[i].phi = 0.0;  
+    return;
+  }
+
+  const double theta = thetaFromFarness(accuracy);
+  for (int i = 0; i < n; i++) {
+    const tValueTriad self = qtree.evaluateTarget(particle[i].x, particle[i].y, theta, nearfield_epksq);
+    particle[i].phi = G * self.value;
+    particle[i].vxdot -= G * self.gradx;
+    particle[i].vydot -= G * self.grady;
+  }
 }
 
 EMSCRIPTEN_KEEPALIVE
@@ -210,6 +240,7 @@ void eulerTimestep(int n, double dt) {
     particle[i].vx += dt * particle[i].vxdot;
     particle[i].vy += dt * particle[i].vydot;
   }
+  time += dt;
 }
 
 EMSCRIPTEN_KEEPALIVE

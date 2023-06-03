@@ -10,16 +10,20 @@ var importObject = {
 WebAssembly.instantiateStreaming(fetch('ggas.wasm'), importObject)
 .then((results) =>
 {
+    var getTime = results.instance.exports.getTime;
     var getParticleX = results.instance.exports.getParticleX;
     var getParticleY = results.instance.exports.getParticleY;
-    var getParticleRho = results.instance.exports.getParticleRho;
+    //var getParticleRho = results.instance.exports.getParticleRho;
     var initializeUniformly = results.instance.exports.initializeUniformly;
     var rebuildTree = results.instance.exports.rebuildTree;
     var computeDensityAndDot = results.instance.exports.computeDensityAndDot;
     var eulerTimestep = results.instance.exports.eulerTimestep;
     var boundaryReflection = results.instance.exports.boundaryReflection;
+    var setPotentialType = results.instance.exports.setPotentialType;
 
     var numParticles = 3456;
+    var Gstrength = 0.0;
+    var treeCodeAccuracy = 0.15;
     
     const M0 = 1.0 / numParticles;
     const U0 = 1.0;
@@ -33,8 +37,9 @@ WebAssembly.instantiateStreaming(fetch('ggas.wasm'), importObject)
             initializeUniformly(numParticles, M0, U0, 0.0, width, 0.0, height);
         }
 
-        if (key == 'd' || key == 'D') {
-            console.log(getParticleRho(0));
+        if (key == 'g' || key == 'G') {
+            if (Gstrength > 0.0) Gstrength = 0.0; 
+                else Gstrength = 4.0;
         }
 
         // TODO: add particle / remove particle..
@@ -53,13 +58,13 @@ WebAssembly.instantiateStreaming(fetch('ggas.wasm'), importObject)
     
     var startTime = Date.now();
     var time = 0.0;
-    var simTime = 0.0; // should just use a callback to fetch this from the C++ code
     
     const betaFPSfilter = 1.0 / 100.0;
     var filteredFPS = 0.0;
     var showStats = true;
 
     initializeUniformly(numParticles, M0, U0, 0.0, width, 0.0, height);
+    setPotentialType(0);
    
     function main()
     {
@@ -73,13 +78,15 @@ WebAssembly.instantiateStreaming(fetch('ggas.wasm'), importObject)
         if (elapsedTimeSeconds > 0.0 && elapsedTimeSeconds < 1.0)
             filteredFPS = (betaFPSfilter) * (1.0 / elapsedTimeSeconds) + (1.0 - betaFPSfilter) * filteredFPS; 
 
+        const simTime = getTime();
+
         ctx.globalAlpha = 1.00;
         ctx.fillStyle = 'rgb(240, 240, 255)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        const ptRadius = 2.0;
+        const ptRadius = 3.0;
         ctx.globalAlpha = 0.25;
-        ctx.fillStyle = 'rgb(255, 0, 192)';
+        ctx.fillStyle = 'rgb(192, 0, 255)';
         for (var i = 0; i < numParticles; i++) {
             const xi = getParticleX(i);
             const yi = getParticleY(i);
@@ -92,13 +99,13 @@ WebAssembly.instantiateStreaming(fetch('ggas.wasm'), importObject)
             ctx.globalAlpha = 1.00;
             ctx.fillStyle = 'rgb(32, 32, 255)';
             ctx.font = '16px Courier New';
-            ctx.fillText('sim. time = ' + (simTime * 1.0e9).toFixed(3) + ' [nondim]', 10.0, height - 30.0);
+            ctx.fillText('sim. time = ' + simTime.toFixed(3) + ' [nondim]', 10.0, height - 30.0);
             ctx.fillText('wall time = ' + time.toFixed(3) + ' [s], <fps> = ' + filteredFPS.toFixed(1), 10.0, height - 10.0);
-            ctx.fillText('particles = ' + numParticles, 10.0, 10.0);
+            ctx.fillText('particles = ' + numParticles + ', gravity = ' + Gstrength.toFixed(3), 10.0, 20.0);
         }
 
         rebuildTree(numParticles);
-        computeDensityAndDot(numParticles);
+        computeDensityAndDot(numParticles, Gstrength, treeCodeAccuracy);
         boundaryReflection(numParticles, 0.0, width, 0.0, height);
         eulerTimestep(numParticles, 0.50);
 
