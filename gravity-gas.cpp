@@ -7,6 +7,8 @@
  */
 
 // TODO: total system energy (document clearly)
+// TODO: variate generation in circular region
+// TODO: viscosity loss
 
 #include <emscripten.h>
 #include <cmath>
@@ -138,6 +140,14 @@ void initializeUniformly(int n,
     particle[i].vy = 0.0;
   }
   time = 0.0;
+}
+
+EMSCRIPTEN_KEEPALIVE
+void zeroVelocity(int n) {
+  for (int i = 0; i < n; i++) {
+    particle[i].vx = 0.0;
+    particle[i].vy = 0.0;
+  }
 }
 
 EMSCRIPTEN_KEEPALIVE

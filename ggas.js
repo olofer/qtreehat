@@ -20,10 +20,12 @@ WebAssembly.instantiateStreaming(fetch('ggas.wasm'), importObject)
     var eulerTimestep = results.instance.exports.eulerTimestep;
     var boundaryReflection = results.instance.exports.boundaryReflection;
     var setPotentialType = results.instance.exports.setPotentialType;
+    var zeroVelocity = results.instance.exports.zeroVelocity;
 
-    var numParticles = 3456;
-    var Gstrength = 0.0;
-    var treeCodeAccuracy = 0.15;
+    var numParticles = 5000;
+    var Gstrength = 20.0;
+    var treeCodeAccuracy = 0.20;
+    var applyBox = false;
     
     const M0 = 1.0 / numParticles;
     const U0 = 1.0;
@@ -38,12 +40,23 @@ WebAssembly.instantiateStreaming(fetch('ggas.wasm'), importObject)
         }
 
         if (key == 'g' || key == 'G') {
-            if (Gstrength > 0.0) Gstrength = 0.0; 
-                else Gstrength = 4.0;
+            Gstrength += 1.0;
+        }
+
+        if (key == 'f' || key == 'F') {
+            Gstrength -= 1.0;
+            if (Gstrength < 0.0) Gstrength = 0.0;
+        }
+
+        if (key == 'b' || key == 'B') {
+            applyBox = !applyBox;
+        }
+
+        if (key == 'z' || key == 'Z') {
+            zeroVelocity(numParticles);
         }
 
         // TODO: add particle / remove particle..
-        // TODO: toggle periodic?
     }
 
     const twoPi = 2.0 * Math.PI;
@@ -62,6 +75,8 @@ WebAssembly.instantiateStreaming(fetch('ggas.wasm'), importObject)
     const betaFPSfilter = 1.0 / 100.0;
     var filteredFPS = 0.0;
     var showStats = true;
+
+    const simulationDelta = 0.250;
 
     initializeUniformly(numParticles, M0, U0, 0.0, width, 0.0, height);
     setPotentialType(0);
@@ -102,12 +117,13 @@ WebAssembly.instantiateStreaming(fetch('ggas.wasm'), importObject)
             ctx.fillText('sim. time = ' + simTime.toFixed(3) + ' [nondim]', 10.0, height - 30.0);
             ctx.fillText('wall time = ' + time.toFixed(3) + ' [s], <fps> = ' + filteredFPS.toFixed(1), 10.0, height - 10.0);
             ctx.fillText('particles = ' + numParticles + ', gravity = ' + Gstrength.toFixed(3), 10.0, 20.0);
+            if (applyBox) ctx.fillText('using boundary reflection', 10.0, 40.0);
         }
 
         rebuildTree(numParticles);
         computeDensityAndDot(numParticles, Gstrength, treeCodeAccuracy);
-        boundaryReflection(numParticles, 0.0, width, 0.0, height);
-        eulerTimestep(numParticles, 0.50);
+        if (applyBox) boundaryReflection(numParticles, 0.0, width, 0.0, height);
+        eulerTimestep(numParticles, simulationDelta);
 
         window.requestAnimationFrame(main);
     }
