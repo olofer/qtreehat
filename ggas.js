@@ -14,7 +14,9 @@ WebAssembly.instantiateStreaming(fetch('ggas.wasm'), importObject)
     var getParticleX = results.instance.exports.getParticleX;
     var getParticleY = results.instance.exports.getParticleY;
     //var getParticleRho = results.instance.exports.getParticleRho;
+    var addParticleAt = results.instance.exports.addParticleAt;
     var initializeUniformly = results.instance.exports.initializeUniformly;
+    var initializeDisc = results.instance.exports.initializeDisc;
     var rebuildTree = results.instance.exports.rebuildTree;
     var computeDensityAndDot = results.instance.exports.computeDensityAndDot;
     var eulerTimestep = results.instance.exports.eulerTimestep;
@@ -22,7 +24,7 @@ WebAssembly.instantiateStreaming(fetch('ggas.wasm'), importObject)
     var setPotentialType = results.instance.exports.setPotentialType;
     var zeroVelocity = results.instance.exports.zeroVelocity;
 
-    var numParticles = 5000;
+    var numParticles = 2500;
     var Gstrength = 20.0;
     var treeCodeAccuracy = 0.20;
     var applyBox = false;
@@ -37,6 +39,10 @@ WebAssembly.instantiateStreaming(fetch('ggas.wasm'), importObject)
 
         if (key == 'r' || key == 'R') {
             initializeUniformly(numParticles, M0, U0, 0.0, width, 0.0, height);
+        }
+
+        if (key == 'c' || key == 'C') {
+            initializeDisc(numParticles, M0, U0, width / 2.0, height / 2.0, height / 2.10);
         }
 
         if (key == 'g' || key == 'G') {
@@ -56,7 +62,19 @@ WebAssembly.instantiateStreaming(fetch('ggas.wasm'), importObject)
             zeroVelocity(numParticles);
         }
 
-        // TODO: add particle / remove particle..
+        if (key == 'a' || key == 'A') {
+            if (addParticleAt(numParticles, 
+                              M0, U0, 
+                              width * Math.random(), 
+                              height * Math.random(), 
+                              0.0, 0.0))
+                numParticles += 1;
+        }
+
+        if (key == 's' || key == 'S') {
+            if (numParticles > 1)
+                numParticles -= 1;
+        }
     }
 
     const twoPi = 2.0 * Math.PI;
@@ -134,9 +152,8 @@ WebAssembly.instantiateStreaming(fetch('ggas.wasm'), importObject)
         const rect = canvas.getBoundingClientRect();
         const mouseX = event.clientX - rect.left;
         const mouseY = event.clientY - rect.top;
-        /*const newX = xmin + (mouseX / width) * domainWidth;
-        const newY = domainHeight / 2.0 - (mouseY / height) * domainHeight;
-        sourcePlace(newX, newY); */
+        if (addParticleAt(numParticles, M0, U0, mouseX, mouseY, 0.0, 0.0))
+            numParticles += 1;
     }
 
     canvas.addEventListener('mousedown', handleMouseDown);

@@ -7,8 +7,8 @@
  */
 
 // TODO: total system energy (document clearly)
-// TODO: variate generation in circular region
-// TODO: viscosity loss
+// TODO: force a circular spin for the present configuration
+// TODO: viscosity loss; leapfrog integrator; I want to see the eventual settling to equilibrium "ball"
 
 #include <emscripten.h>
 #include <cmath>
@@ -143,6 +143,32 @@ void initializeUniformly(int n,
 }
 
 EMSCRIPTEN_KEEPALIVE
+void initializeDisc(int n,
+                    double m,
+                    double u, 
+                    double cx, 
+                    double cy, 
+                    double R)
+{
+  int k = 0;
+  const double R2 = R * R;
+  while (k < n) {
+    const double xk = cx + R * (2.0 * getRandomJS() - 1.0);
+    const double yk = cy + R * (2.0 * getRandomJS() - 1.0);
+    const double rk2 = (xk - cx) * (xk - cx) + (yk - cy) * (yk - cy);
+    if (rk2 > R2) continue;
+    particle[k].x = xk;
+    particle[k].y = yk;
+    particle[k].m = m;
+    particle[k].u = u;
+    particle[k].vx = 0.0;
+    particle[k].vy = 0.0;
+    k++;
+  }
+  time = 0.0;
+}
+
+EMSCRIPTEN_KEEPALIVE
 void zeroVelocity(int n) {
   for (int i = 0; i < n; i++) {
     particle[i].vx = 0.0;
@@ -168,6 +194,25 @@ double getParticleY(int i) {
 EMSCRIPTEN_KEEPALIVE
 double getParticleRho(int i) {
   return particle[i].rho;
+}
+
+EMSCRIPTEN_KEEPALIVE
+bool addParticleAt(int n, 
+                   double m, 
+                   double u,
+                   double x,
+                   double y,
+                   double vx, 
+                   double vy) 
+{
+  if (n >= NMAX) return false;
+  particle[n].x = x;
+  particle[n].y = y;
+  particle[n].vx = vx;
+  particle[n].vy = vy;
+  particle[n].u = u;
+  particle[n].m = m;
+  return true;
 }
 
 EMSCRIPTEN_KEEPALIVE
