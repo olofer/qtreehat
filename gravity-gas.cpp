@@ -116,6 +116,30 @@ void dot_summation_callback(int i, int j, void* aux) {
 extern "C" {
 
 EMSCRIPTEN_KEEPALIVE
+double calcLinearMomentumX(int n) {
+  double px = 0.0;
+  for (int i = 0; i < n; i++)
+    px += particle[i].m * particle[i].vx;
+  return px;
+}
+
+EMSCRIPTEN_KEEPALIVE
+double calcLinearMomentumY(int n) {
+  double py = 0.0;
+  for (int i = 0; i < n; i++)
+    py += particle[i].m * particle[i].vy;
+  return py;
+}
+
+EMSCRIPTEN_KEEPALIVE
+double calcAngularMomentumZ(int n) {
+  double lz = 0.0;
+  for (int i = 0; i < n; i++)
+    lz += particle[i].m * (particle[i].x * particle[i].vy - particle[i].y * particle[i].vx);
+  return lz;
+}
+
+EMSCRIPTEN_KEEPALIVE
 double getRandomJS() {
   return emscripten_random();
 }

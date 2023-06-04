@@ -15,6 +15,9 @@ WebAssembly.instantiateStreaming(fetch('ggas.wasm'), importObject)
     var getParticleY = results.instance.exports.getParticleY;
     //var getParticleRho = results.instance.exports.getParticleRho;
     var addParticleAt = results.instance.exports.addParticleAt;
+    var calcLinearMomentumX = results.instance.exports.calcLinearMomentumX;
+    var calcLinearMomentumY = results.instance.exports.calcLinearMomentumY;
+    var calcAngularMomentumZ = results.instance.exports.calcAngularMomentumZ;
     var initializeUniformly = results.instance.exports.initializeUniformly;
     var initializeDisc = results.instance.exports.initializeDisc;
     var rebuildTree = results.instance.exports.rebuildTree;
@@ -139,13 +142,19 @@ WebAssembly.instantiateStreaming(fetch('ggas.wasm'), importObject)
         }
 
         if (showStats) {
+            const Px = calcLinearMomentumX(numParticles);
+            const Py = calcLinearMomentumY(numParticles);
+            const Lz = calcAngularMomentumZ(numParticles);
+
             ctx.globalAlpha = 1.00;
             ctx.fillStyle = 'rgb(32, 32, 255)';
             ctx.font = '16px Courier New';
             ctx.fillText('sim. time = ' + simTime.toFixed(3) + ' [nondim]', 10.0, height - 30.0);
             ctx.fillText('wall time = ' + time.toFixed(3) + ' [s], <fps> = ' + filteredFPS.toFixed(1), 10.0, height - 10.0);
             ctx.fillText('particles = ' + numParticles + ', gravity = ' + Gstrength.toFixed(3), 10.0, 20.0);
-            if (applyBox) ctx.fillText('using boundary reflection', 10.0, 40.0);
+            statStr = 'Px = ' + Px.toFixed(3) + ', Py = ' + Py.toFixed(3) + ', Lz = ' + Lz.toFixed(3);
+            ctx.fillText(statStr, 10.0, 40.0);
+            if (applyBox) ctx.fillText('using boundary reflection', 10.0, 60.0);
         }
 
         rebuildTree(numParticles);
