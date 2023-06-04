@@ -1,2 +1,2 @@
 rm ggas.wasm
-emcc gravity-gas.cpp -s STANDALONE_WASM -fno-exceptions -DNDEBUG -std=c++14 -Wall -O3 --no-entry -o ggas.wasm;
+emcc -std=c++14 -Wall -msimd128 -O3 gravity-gas.cpp -s STANDALONE_WASM -fno-exceptions -DNDEBUG --no-entry -o ggas.wasm;
