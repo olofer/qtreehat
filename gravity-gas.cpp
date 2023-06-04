@@ -6,8 +6,9 @@
  *
  */
 
-// TODO: total system energy (document clearly; three separate parts)
-// TODO: viscosity loss; leapfrog integrator; I want to see the eventual settling to equilibrium "ball"
+// TODO: leapfrog integrator
+// TODO: dirichlet process clustering initialization option 'M'
+// TODO: viscosity loss; confirm eventual settling to equilibrium "ball"
 // TODO: means to inc/dec pressure / internal energy
 
 #include <emscripten.h>
@@ -41,7 +42,7 @@ void evaluate_kernel_wc2(double x,
     *wy = 0.0;
     return;
   }
-  const double q = sqrt(q2);
+  const double q = std::sqrt(q2);
   const double tmp = 4.0 - 4.0 * q + q2;
   const double W = N * (1.0 + 2.0 * q) * tmp * tmp;
   *w = W;
@@ -140,6 +141,20 @@ double calcAngularMomentumZ(int n) {
 }
 
 EMSCRIPTEN_KEEPALIVE
+double calcTotalEnergy(int n) {
+  double K = 0.0;
+  double G = 0.0;
+  double U = 0.0;
+  for (int i = 0; i < n; i++) {
+    const double m = particle[i].m;
+    K += m * (particle[i].vx * particle[i].vx + particle[i].vy * particle[i].vy);
+    G += m * particle[i].phi;
+    U += m * particle[i].u; 
+  }
+  return K / 2.0 + G / 2.0 + U;
+}
+
+EMSCRIPTEN_KEEPALIVE
 double getRandomJS() {
   return emscripten_random();
 }
@@ -177,12 +192,12 @@ void initializeDisc(int n,
   int k = 0;
   const double R2 = R * R;
   while (k < n) {
-    const double xk = cx + R * (2.0 * getRandomJS() - 1.0);
-    const double yk = cy + R * (2.0 * getRandomJS() - 1.0);
-    const double rk2 = (xk - cx) * (xk - cx) + (yk - cy) * (yk - cy);
+    const double xk = R * (2.0 * getRandomJS() - 1.0);
+    const double yk = R * (2.0 * getRandomJS() - 1.0);
+    const double rk2 = xk * xk + yk * yk;
     if (rk2 > R2) continue;
-    particle[k].x = xk;
-    particle[k].y = yk;
+    particle[k].x = cx + xk;
+    particle[k].y = cy + yk;
     particle[k].m = m;
     particle[k].u = u;
     particle[k].vx = 0.0;
@@ -211,7 +226,10 @@ void perturbVelocity(int n,
 }
 
 EMSCRIPTEN_KEEPALIVE
-void forceSpin(int n, double omega) {
+void forceSpin(int n, 
+               double omega,
+               bool add)
+{
   double sumx = 0.0;
   double sumy = 0.0;
   double summ = 0.0;
@@ -225,8 +243,13 @@ void forceSpin(int n, double omega) {
   for (int i = 0; i < n; i++) {
     const double rx = particle[i].x - cgx;
     const double ry = particle[i].y - cgy;
-    particle[i].vx = -1.0 * omega * ry;
-    particle[i].vy = omega * rx;
+    if (add) {
+      particle[i].vx -= omega * ry;
+      particle[i].vy += omega * rx;
+    } else {
+      particle[i].vx = -1.0 * omega * ry;
+      particle[i].vy = omega * rx;
+    }
   }
 }
 

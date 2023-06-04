@@ -18,6 +18,7 @@ WebAssembly.instantiateStreaming(fetch('ggas.wasm'), importObject)
     var calcLinearMomentumX = results.instance.exports.calcLinearMomentumX;
     var calcLinearMomentumY = results.instance.exports.calcLinearMomentumY;
     var calcAngularMomentumZ = results.instance.exports.calcAngularMomentumZ;
+    var calcTotalEnergy = results.instance.exports.calcTotalEnergy;
     var initializeUniformly = results.instance.exports.initializeUniformly;
     var initializeDisc = results.instance.exports.initializeDisc;
     var rebuildTree = results.instance.exports.rebuildTree;
@@ -31,7 +32,7 @@ WebAssembly.instantiateStreaming(fetch('ggas.wasm'), importObject)
 
     var numParticles = 2500;
     var Gstrength = 20.0;
-    var treeCodeAccuracy = 0.20;
+    var treeCodeAccuracy = 0.15;
     var applyBox = false;
     
     const M0 = 1.0 / numParticles;
@@ -82,7 +83,9 @@ WebAssembly.instantiateStreaming(fetch('ggas.wasm'), importObject)
         }
 
         if (key == 'q' || key == 'Q') {
-            forceSpin(numParticles, Math.sign(Math.random() - 0.5) * 2.0 * Math.PI / 400.0);
+            forceSpin(numParticles, 
+                      Math.sign(Math.random() - 0.5) * 2.0 * Math.PI / 400.0, 
+                      true); // super-impose rotational velocity
         }
 
         if (key == 'w' || key == 'W') {
@@ -145,6 +148,7 @@ WebAssembly.instantiateStreaming(fetch('ggas.wasm'), importObject)
             const Px = calcLinearMomentumX(numParticles);
             const Py = calcLinearMomentumY(numParticles);
             const Lz = calcAngularMomentumZ(numParticles);
+            const totalE = calcTotalEnergy(numParticles);
 
             ctx.globalAlpha = 1.00;
             ctx.fillStyle = 'rgb(32, 32, 255)';
@@ -152,7 +156,7 @@ WebAssembly.instantiateStreaming(fetch('ggas.wasm'), importObject)
             ctx.fillText('sim. time = ' + simTime.toFixed(3) + ' [nondim]', 10.0, height - 30.0);
             ctx.fillText('wall time = ' + time.toFixed(3) + ' [s], <fps> = ' + filteredFPS.toFixed(1), 10.0, height - 10.0);
             ctx.fillText('particles = ' + numParticles + ', gravity = ' + Gstrength.toFixed(3), 10.0, 20.0);
-            statStr = 'Px = ' + Px.toFixed(3) + ', Py = ' + Py.toFixed(3) + ', Lz = ' + Lz.toFixed(3);
+            statStr = 'Px = ' + Px.toFixed(3) + ', Py = ' + Py.toFixed(3) + ', Lz = ' + Lz.toFixed(3) + ', Energy = ' + totalE.toFixed(3);
             ctx.fillText(statStr, 10.0, 40.0);
             if (applyBox) ctx.fillText('using boundary reflection', 10.0, 60.0);
         }
