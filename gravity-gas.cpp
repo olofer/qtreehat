@@ -6,9 +6,9 @@
  *
  */
 
-// TODO: total system energy (document clearly)
-// TODO: force a circular spin for the present configuration
+// TODO: total system energy (document clearly; three separate parts)
 // TODO: viscosity loss; leapfrog integrator; I want to see the eventual settling to equilibrium "ball"
+// TODO: means to inc/dec pressure / internal energy
 
 #include <emscripten.h>
 #include <cmath>
@@ -173,6 +173,36 @@ void zeroVelocity(int n) {
   for (int i = 0; i < n; i++) {
     particle[i].vx = 0.0;
     particle[i].vy = 0.0;
+  }
+}
+
+EMSCRIPTEN_KEEPALIVE
+void perturbVelocity(int n, 
+                     double sigma) 
+{
+  for (int i = 0; i < n; i++) {
+    particle[i].vx += sigma * (2.0 * getRandomJS() - 1.0);
+    particle[i].vy += sigma * (2.0 * getRandomJS() - 1.0);
+  }
+}
+
+EMSCRIPTEN_KEEPALIVE
+void forceSpin(int n, double omega) {
+  double sumx = 0.0;
+  double sumy = 0.0;
+  double summ = 0.0;
+  for (int i = 0; i < n; i++) {
+    summ += particle[i].m;
+    sumx += particle[i].m * particle[i].x;
+    sumy += particle[i].m * particle[i].y;
+  }
+  const double cgx = sumx / summ;
+  const double cgy = sumy / summ;
+  for (int i = 0; i < n; i++) {
+    const double rx = particle[i].x - cgx;
+    const double ry = particle[i].y - cgy;
+    particle[i].vx = -1.0 * omega * ry;
+    particle[i].vy = omega * rx;
   }
 }
 

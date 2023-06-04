@@ -23,6 +23,8 @@ WebAssembly.instantiateStreaming(fetch('ggas.wasm'), importObject)
     var boundaryReflection = results.instance.exports.boundaryReflection;
     var setPotentialType = results.instance.exports.setPotentialType;
     var zeroVelocity = results.instance.exports.zeroVelocity;
+    var forceSpin = results.instance.exports.forceSpin;
+    var perturbVelocity = results.instance.exports.perturbVelocity;
 
     var numParticles = 2500;
     var Gstrength = 20.0;
@@ -74,6 +76,14 @@ WebAssembly.instantiateStreaming(fetch('ggas.wasm'), importObject)
         if (key == 's' || key == 'S') {
             if (numParticles > 1)
                 numParticles -= 1;
+        }
+
+        if (key == 'q' || key == 'Q') {
+            forceSpin(numParticles, Math.sign(Math.random() - 0.5) * 2.0 * Math.PI / 400.0);
+        }
+
+        if (key == 'w' || key == 'W') {
+            perturbVelocity(numParticles, 10.0);
         }
     }
 
