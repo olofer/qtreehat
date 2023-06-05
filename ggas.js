@@ -32,9 +32,10 @@ WebAssembly.instantiateStreaming(fetch('ggas.wasm'), importObject)
     var zeroVelocity = results.instance.exports.zeroVelocity;
     var forceSpin = results.instance.exports.forceSpin;
     var perturbVelocity = results.instance.exports.perturbVelocity;
+    var initializeThreeBody = results.instance.exports.initializeThreeBody;
 
     var numParticles = 2000;
-    var Gstrength = 40.0;
+    var Gstrength = 30.0;
     var treeCodeAccuracy = 0.15;
     var applyBox = false;
     var useEuler = false;
@@ -42,7 +43,7 @@ WebAssembly.instantiateStreaming(fetch('ggas.wasm'), importObject)
     const simulationDelta = 0.100;
     
     const M0 = 1.0 / numParticles;
-    const U0 = 1.0;
+    const U0 = 2.0;
 
     function keyDownEvent(e)
     {
@@ -101,6 +102,16 @@ WebAssembly.instantiateStreaming(fetch('ggas.wasm'), importObject)
         if (key == 'e' || key == 'E') {
             useEuler = !useEuler;
         }
+
+        if (key == '3') {
+            initializeThreeBody(numParticles, 
+                                M0, 
+                                U0, 
+                                width / 2.0, 
+                                height / 2.0, 
+                                height / 3.0, 
+                                2.00);
+        }
     }
 
     const twoPi = 2.0 * Math.PI;
@@ -120,8 +131,8 @@ WebAssembly.instantiateStreaming(fetch('ggas.wasm'), importObject)
     var filteredFPS = 0.0;
     var showStats = true;
 
-    //initializeUniformly(numParticles, M0, U0, 0.0, width, 0.0, height);
-    initializeDisc(numParticles, M0, U0, width / 2.0, height / 2.0, height / 2.10);
+    initializeUniformly(numParticles, M0, U0, 0.0, width, 0.0, height);
+    //initializeDisc(numParticles, M0, U0, width / 2.0, height / 2.0, height / 2.10);
     setPotentialType(0);
 
     rebuildTree(numParticles);

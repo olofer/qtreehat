@@ -22,6 +22,8 @@ const double nearfield_epksq = 1.0e-6;
 const double sph_kernel_h = 5.0;
 const double sph_kernel_radius = sph_kernel_h * 2.0;
 
+const double _one_pi = 3.14159265358979323846;
+
 // Wendland C2 kernel; support radius = 2 * h
 void evaluate_kernel_wc2(double x, 
                          double y, 
@@ -30,7 +32,6 @@ void evaluate_kernel_wc2(double x,
                          double* wx,
                          double* wy)
 {
-  const double _one_pi = 3.14159265358979323846;
   const double sigma = 7.0 / (64.0 * _one_pi);
   const double h2 = h * h;
   const double N = sigma / h2;
@@ -123,6 +124,20 @@ void dot_summation_callback(int i, int j, void* aux) {
 extern "C" {
 
 EMSCRIPTEN_KEEPALIVE
+double getRandomJS() {
+  return emscripten_random();
+}
+
+// Irwin-Hall distribution using n = 12
+EMSCRIPTEN_KEEPALIVE
+double getApproximateNormal() {
+  double sum = 0.0;
+  for (int i = 0; i < 12; i++)
+    sum += emscripten_random();
+  return sum - 6.0;
+}
+
+EMSCRIPTEN_KEEPALIVE
 double calcLinearMomentumX(int n) {
   double px = 0.0;
   for (int i = 0; i < n; i++)
@@ -161,17 +176,39 @@ double calcTotalEnergy(int n) {
 }
 
 EMSCRIPTEN_KEEPALIVE
-double getRandomJS() {
-  return emscripten_random();
+void zeroVelocity(int n) {
+  for (int i = 0; i < n; i++) {
+    particle[i].vx = 0.0;
+    particle[i].vy = 0.0;
+  }
 }
 
-// Irwin-Hall distribution using n = 12
 EMSCRIPTEN_KEEPALIVE
-double getApproximateNormal() {
-  double sum = 0.0;
-  for (int i = 0; i < 12; i++)
-    sum += emscripten_random();
-  return sum - 6.0;
+void perturbVelocity(int n, 
+                     double sigma) 
+{
+  for (int i = 0; i < n; i++) {
+    particle[i].vx += sigma * getApproximateNormal();
+    particle[i].vy += sigma * getApproximateNormal();
+  }
+}
+
+EMSCRIPTEN_KEEPALIVE
+void zeroLinearMomentum(int n) {
+  double M = 0.0;
+  double px = 0.0;
+  double py = 0.0;
+  for (int i = 0; i < n; i++) {
+    M += particle[i].m;
+    px += particle[i].m * particle[i].vx;
+    py += particle[i].m * particle[i].vy;
+  }
+  const double cgvx = px / M;
+  const double cgvy = py / M;
+  for (int i = 0; i < n; i++) {
+    particle[i].vx -= cgvx;
+    particle[i].vy -= cgvy;
+  }
 }
 
 EMSCRIPTEN_KEEPALIVE
@@ -223,21 +260,73 @@ void initializeDisc(int n,
 }
 
 EMSCRIPTEN_KEEPALIVE
-void zeroVelocity(int n) {
-  for (int i = 0; i < n; i++) {
-    particle[i].vx = 0.0;
-    particle[i].vy = 0.0;
-  }
-}
-
-EMSCRIPTEN_KEEPALIVE
-void perturbVelocity(int n, 
-                     double sigma) 
+void initializeThreeBody(int n,
+                         double m,
+                         double u,
+                         double cx,
+                         double cy,
+                         double R,
+                         double V)
 {
+  // Generate 3x cloud centers
+  const double theta1 = 2.0 * _one_pi * getRandomJS();
+  const double rad1 = getRandomJS() * R;
+  const double x1 = cx + std::cos(theta1) * rad1;
+  const double y1 = cy + std::sin(theta1) * rad1;
+
+  const double vx1 = getApproximateNormal() * V;
+  const double vy1 = getApproximateNormal() * V;
+
+  const double theta2 = 2.0 * _one_pi * getRandomJS();
+  const double rad2 = getRandomJS() * R;
+  const double x2 = cx + std::cos(theta2) * rad2;
+  const double y2 = cy + std::sin(theta2) * rad2;
+
+  const double vx2 = getApproximateNormal() * V;
+  const double vy2 = getApproximateNormal() * V;
+
+  const double theta3 = 2.0 * _one_pi * getRandomJS();
+  const double rad3 = getRandomJS() * R;
+  const double x3 = cx + std::cos(theta3) * rad3;
+  const double y3 = cy + std::sin(theta3) * rad3;
+
+  const double vx3 = getApproximateNormal() * V;
+  const double vy3 = getApproximateNormal() * V;
+
   for (int i = 0; i < n; i++) {
-    particle[i].vx += sigma * getApproximateNormal();
-    particle[i].vy += sigma * getApproximateNormal();
+    double dx = getApproximateNormal() * R / 8.0;
+    double dy = getApproximateNormal() * R / 8.0;
+
+    double dvx = getApproximateNormal() * V / 20.0;
+    double dvy = getApproximateNormal() * V / 20.0;
+
+    const double v = getRandomJS();
+    if (v < 1.0 / 3.0) {
+      dx += x1;
+      dy += y1;
+      dvx += vx1;
+      dvy += vy1;
+    } else if (v > 1.0 / 3.0 && v < 2.0 / 3.0) {
+      dx += x2;
+      dy += y2;
+      dvx += vx2;
+      dvy += vy2;
+    } else {
+      dx += x3;
+      dy += y3;
+      dvx += vx3;
+      dvy += vy3;
+    }
+
+    particle[i].x = dx;
+    particle[i].y = dy;
+    particle[i].m = m;
+    particle[i].u = u;
+    particle[i].vx = dvx;
+    particle[i].vy = dvy;
   }
+
+  zeroLinearMomentum(n);
 }
 
 EMSCRIPTEN_KEEPALIVE
