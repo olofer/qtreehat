@@ -6,8 +6,7 @@
  *
  */
 
-// TODO: leapfrog integrator
-// TODO: dirichlet process clustering initialization option 'M'
+// TODO: clustering initialization option 'M'
 // TODO: viscosity loss; confirm eventual settling to equilibrium "ball"
 // TODO: means to inc/dec pressure / internal energy
 
@@ -70,8 +69,15 @@ struct tParticle {
   double vydot;
 };
 
+struct tDotState {
+  double udot;
+  double vxdot;
+  double vydot;
+};
+
 static double time;
 static tParticle particle[NMAX];
+static tDotState previous_dotstate[NMAX];
 static tQuadTreeHandle<NMAX, LEAF> qtree;
 
 void density_summation_callback(int i, int j, void* aux) {
@@ -259,6 +265,11 @@ double getTime(void) {
 }
 
 EMSCRIPTEN_KEEPALIVE
+void updateTime(double dt) {
+  time += dt;
+}
+
+EMSCRIPTEN_KEEPALIVE
 double getParticleX(int i) {
   return particle[i].x;
 }
@@ -364,7 +375,7 @@ void computeDensityAndDot(int n,
 }
 
 EMSCRIPTEN_KEEPALIVE
-void eulerTimestep(int n, double dt) {
+void eulerUpdate(int n, double dt) {
   for (int i = 0; i < n; i++) {
     particle[i].u += dt * particle[i].udot;
     particle[i].x += dt * particle[i].vx;
@@ -372,7 +383,36 @@ void eulerTimestep(int n, double dt) {
     particle[i].vx += dt * particle[i].vxdot;
     particle[i].vy += dt * particle[i].vydot;
   }
-  time += dt;
+}
+
+EMSCRIPTEN_KEEPALIVE
+void saveDotState(int n) {
+  for (int i = 0; i < n; i++) {
+    previous_dotstate[i].udot = particle[i].udot;
+    previous_dotstate[i].vxdot = particle[i].vxdot;
+    previous_dotstate[i].vydot = particle[i].vydot;
+  }
+}
+
+EMSCRIPTEN_KEEPALIVE
+void firstUpdate(int n, double dt) {
+  const double A = dt * dt / 2.0;
+  for (int i = 0; i < n; i++) {
+    particle[i].x += dt * particle[i].vx + A * particle[i].vxdot;
+    particle[i].y += dt * particle[i].vy + A * particle[i].vydot;
+    //particle[i].u += dt * particle[i].udot;
+  }
+}
+
+EMSCRIPTEN_KEEPALIVE
+void secondUpdate(int n, double dt) {
+  const double A = dt / 2.0;
+  for (int i = 0; i < n; i++) {
+    particle[i].vx += A * (particle[i].vxdot + previous_dotstate[i].vxdot);
+    particle[i].vy += A * (particle[i].vydot + previous_dotstate[i].vydot);
+    //particle[i].u  += A * (-1.0 * previous_dotstate[i].udot + particle[i].udot);
+    particle[i].u  += A * (particle[i].udot + previous_dotstate[i].udot);
+  }
 }
 
 EMSCRIPTEN_KEEPALIVE
