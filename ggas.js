@@ -33,17 +33,17 @@ WebAssembly.instantiateStreaming(fetch('ggas.wasm'), importObject)
     var forceSpin = results.instance.exports.forceSpin;
     var perturbVelocity = results.instance.exports.perturbVelocity;
     var initializeThreeBody = results.instance.exports.initializeThreeBody;
+    var multiplySpecificEnergy = results.instance.exports.multiplySpecificEnergy;
 
     var numParticles = 2000;
-    var Gstrength = 30.0;
+    var M0 = 1.0 / numParticles;
+    var U0 = 1.0;
+    var Gstrength = 15.0;
     var treeCodeAccuracy = 0.15;
     var applyBox = false;
     var useEuler = false;
 
     const simulationDelta = 0.100;
-    
-    const M0 = 1.0 / numParticles;
-    const U0 = 2.0;
 
     function keyDownEvent(e)
     {
@@ -56,15 +56,6 @@ WebAssembly.instantiateStreaming(fetch('ggas.wasm'), importObject)
 
         if (key == 'c' || key == 'C') {
             initializeDisc(numParticles, M0, U0, width / 2.0, height / 2.0, height / 2.10);
-        }
-
-        if (key == 'g' || key == 'G') {
-            Gstrength += 1.0;
-        }
-
-        if (key == 'f' || key == 'F') {
-            Gstrength -= 1.0;
-            if (Gstrength < 0.0) Gstrength = 0.0;
         }
 
         if (key == 'b' || key == 'B') {
@@ -89,12 +80,6 @@ WebAssembly.instantiateStreaming(fetch('ggas.wasm'), importObject)
                 numParticles -= 1;
         }
 
-        if (key == 'q' || key == 'Q') {
-            forceSpin(numParticles, 
-                      Math.sign(Math.random() - 0.5) * 2.0 * Math.PI / 400.0, 
-                      true); // super-impose rotational velocity
-        }
-
         if (key == 'w' || key == 'W') {
             perturbVelocity(numParticles, 10.0);
         }
@@ -111,6 +96,37 @@ WebAssembly.instantiateStreaming(fetch('ggas.wasm'), importObject)
                                 height / 2.0, 
                                 height / 3.0, 
                                 2.00);
+        }
+
+        if (code == 39) {  // right
+            forceSpin(numParticles, 
+                      2.0 * Math.PI / 1000.0, 
+                      true);
+        }
+
+        if (code == 37) {  // left
+            forceSpin(numParticles, 
+                -2.0 * Math.PI / 1000.0, 
+                true);
+        }
+
+        if (code == 38) {  // up
+            multiplySpecificEnergy(numParticles, 1.20);
+            U0 *= 1.20;
+        }
+    
+        if (code == 40) {  // down
+            multiplySpecificEnergy(numParticles, 1.0 / 1.20);
+            U0 /= 1.20;
+        }
+
+        if (code == 33) { // pgup
+            Gstrength += 1.0;
+        }
+
+        if (code == 34) { // pgdown
+            Gstrength -= 1.0;
+            if (Gstrength < 0.0) Gstrength = 0.0;
         }
     }
 
@@ -131,8 +147,9 @@ WebAssembly.instantiateStreaming(fetch('ggas.wasm'), importObject)
     var filteredFPS = 0.0;
     var showStats = true;
 
-    initializeUniformly(numParticles, M0, U0, 0.0, width, 0.0, height);
-    //initializeDisc(numParticles, M0, U0, width / 2.0, height / 2.0, height / 2.10);
+    //initializeUniformly(numParticles, M0, U0, 0.0, width, 0.0, height);
+    initializeDisc(numParticles, M0, U0, width / 2.0, height / 2.0, height / 3.0);
+    forceSpin(numParticles, -2.0 * Math.PI / 500.0, true);
     setPotentialType(0);
 
     rebuildTree(numParticles);
@@ -178,7 +195,7 @@ WebAssembly.instantiateStreaming(fetch('ggas.wasm'), importObject)
             ctx.font = '16px Courier New';
             ctx.fillText('sim. time = ' + simTime.toFixed(3) + ' [nondim]', 10.0, height - 30.0);
             ctx.fillText('wall time = ' + time.toFixed(3) + ' [s], <fps> = ' + filteredFPS.toFixed(1), 10.0, height - 10.0);
-            ctx.fillText('particles = ' + numParticles + ', gravity = ' + Gstrength.toFixed(3), 10.0, 20.0);
+            ctx.fillText('part. = ' + numParticles + ', grav. = ' + Gstrength.toFixed(3) + ', pres. = ' + U0.toFixed(3), 10.0, 20.0);
             statStr = 'Px = ' + Px.toFixed(3) + ', Py = ' + Py.toFixed(3) + ', Lz = ' + Lz.toFixed(3) + ', Energy = ' + totalE.toFixed(3);
             if (useEuler) statStr += ' (using Euler)';
             ctx.fillText(statStr, 10.0, 40.0);

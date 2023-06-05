@@ -6,9 +6,7 @@
  *
  */
 
-// TODO: clustering initialization option 'M'
 // TODO: viscosity loss; confirm eventual settling to equilibrium "ball"
-// TODO: means to inc/dec pressure / internal energy
 
 #include <emscripten.h>
 #include <cmath>
@@ -53,7 +51,7 @@ void evaluate_kernel_wc2(double x,
 }
 
 const int NMAX = 10000;
-const int LEAF = 8;
+const int LEAF = 4;
 
 struct tParticle {
   double m;
@@ -354,6 +352,15 @@ void forceSpin(int n,
       particle[i].vx = -1.0 * omega * ry;
       particle[i].vy = omega * rx;
     }
+  }
+}
+
+EMSCRIPTEN_KEEPALIVE
+void multiplySpecificEnergy(int n,
+                            double s)
+{
+  for (int i = 0; i < n; i++) {
+    particle[i].u *= s;
   }
 }
 
