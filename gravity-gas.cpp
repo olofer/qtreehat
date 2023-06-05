@@ -165,6 +165,15 @@ double getRandomJS() {
   return emscripten_random();
 }
 
+// Irwin-Hall distribution using n = 12
+EMSCRIPTEN_KEEPALIVE
+double getApproximateNormal() {
+  double sum = 0.0;
+  for (int i = 0; i < 12; i++)
+    sum += emscripten_random();
+  return sum - 6.0;
+}
+
 EMSCRIPTEN_KEEPALIVE
 void initializeUniformly(int n,
                          double m,
@@ -226,8 +235,8 @@ void perturbVelocity(int n,
                      double sigma) 
 {
   for (int i = 0; i < n; i++) {
-    particle[i].vx += sigma * (2.0 * getRandomJS() - 1.0);
-    particle[i].vy += sigma * (2.0 * getRandomJS() - 1.0);
+    particle[i].vx += sigma * getApproximateNormal();
+    particle[i].vy += sigma * getApproximateNormal();
   }
 }
 
