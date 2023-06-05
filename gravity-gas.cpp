@@ -2,16 +2,17 @@
  * WebAssembly simulation of self-gravitating gas in 2D.
  * Uses quadtree for both fixed-radius neighbor search (pressure) and long-range interaction (gravity). 
  * The (ideal) gas is represented with smoothed particle hydrodynamics.
- * The simulation is lossless (storage: internal energy of gas, gravitational configuration, kinetic energy).
+ * The simulation storage elements are: internal energy, gravitational configuration, kinetic energy.
+ * There is a viscous loss during compression (as kernels are approaching one another).
  *
  */
-
-// TODO: viscosity loss; confirm eventual settling to equilibrium "ball"
 
 #include <emscripten.h>
 #include <cmath>
 #include <cstring>
 #include "qtreehat.hpp"
+
+const double _one_pi = 3.14159265358979323846;
 
 const double gas_gamma = 5.0 / 3.0;
 
@@ -20,7 +21,9 @@ const double nearfield_epksq = 1.0e-6;
 const double sph_kernel_h = 5.0;
 const double sph_kernel_radius = sph_kernel_h * 2.0;
 
-const double _one_pi = 3.14159265358979323846;
+const double sph_alpha = 1.0;
+const double sph_beta = 2.0;
+const double sph_eta = 0.01;
 
 // Wendland C2 kernel; support radius = 2 * h
 void evaluate_kernel_wc2(double x, 
@@ -60,6 +63,7 @@ struct tParticle {
   double u;
   double rho;
   double p;
+  double c;
   double vx;
   double vy;
   double phi;
@@ -91,8 +95,10 @@ void density_summation_callback(int i, int j, void* aux) {
 }
 
 void dot_summation_callback(int i, int j, void* aux) {
-  if (i == j) return;
   tParticle* p = reinterpret_cast<tParticle*>(aux);
+  if (i == j) {
+    return;
+  }
   const double pi = p[i].p;
   const double rhoi = p[i].rho;
   const double xi = p[i].x;
@@ -117,6 +123,15 @@ void dot_summation_callback(int i, int j, void* aux) {
   const double dvxij = vxi - vxj;
   const double dvyij = vyi - vyj;
   p[i].udot += Ci * mj * (dvxij * wx + dvyij * wy);
+  // viscosity
+  const double vdotr = dvxij * dxij + dvyij * dyij;
+  if (vdotr > 0.0) return;
+  const double mu = (sph_kernel_h * vdotr) / (dxij * dxij + dyij * dyij + sph_eta * sph_kernel_h * sph_kernel_h);
+  const double cbar = 0.5 * (p[i].c + p[j].c);
+  const double rhobar = 0.5 * (rhoi + rhoj);
+  const double Bij = mj * (-1.0 * sph_alpha * cbar * mu + sph_beta * mu * mu) / rhobar;
+  p[i].vxdot -= Bij * wx;
+  p[i].vydot -= Bij * wy;
 }
 
 extern "C" {
@@ -446,6 +461,7 @@ void computeDensityAndDot(int n,
                           double accuracy)
 {
   const double gamma_minus_one = gas_gamma - 1.0;
+  const double sqrt_g_gm1 = std::sqrt(gas_gamma * gamma_minus_one);
 
   for (int i = 0; i < n; i++) {
     particle[i].rho = 0.0;
@@ -453,6 +469,7 @@ void computeDensityAndDot(int n,
     quadtree_box_interact(&qtree.root, i, &queryi, sph_kernel_radius, 
                           &density_summation_callback, reinterpret_cast<void *>(particle));
     particle[i].p = gamma_minus_one * particle[i].u * particle[i].rho;
+    particle[i].c = sqrt_g_gm1 * std::sqrt(particle[i].u);
   }
 
   for (int i = 0; i < n; i++) {
