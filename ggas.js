@@ -14,6 +14,7 @@ WebAssembly.instantiateStreaming(fetch('ggas.wasm'), importObject)
     var getParticleX = results.instance.exports.getParticleX;
     var getParticleY = results.instance.exports.getParticleY;
     var addParticleAt = results.instance.exports.addParticleAt;
+    var addGaussianAt = results.instance.exports.addGaussianAt;
     var calcLinearMomentumX = results.instance.exports.calcLinearMomentumX;
     var calcLinearMomentumY = results.instance.exports.calcLinearMomentumY;
     var calcAngularMomentumZ = results.instance.exports.calcAngularMomentumZ;
@@ -34,6 +35,8 @@ WebAssembly.instantiateStreaming(fetch('ggas.wasm'), importObject)
     var perturbVelocity = results.instance.exports.perturbVelocity;
     var initializeThreeBody = results.instance.exports.initializeThreeBody;
     var multiplySpecificEnergy = results.instance.exports.multiplySpecificEnergy;
+    var averageLeafsize = results.instance.exports.averageLeafsize;
+    var averageDepth = results.instance.exports.averageDepth;
 
     var numParticles = 2000;
     var M0 = 1.0 / numParticles;
@@ -42,6 +45,7 @@ WebAssembly.instantiateStreaming(fetch('ggas.wasm'), importObject)
     var treeCodeAccuracy = 0.15;
     var applyBox = false;
     var useEuler = false;
+    var showStats = true;
 
     const simulationDelta = 0.100;
 
@@ -60,6 +64,10 @@ WebAssembly.instantiateStreaming(fetch('ggas.wasm'), importObject)
 
         if (key == 'b' || key == 'B') {
             applyBox = !applyBox;
+        }
+
+        if (key == 't' || key == 'T') {
+            showStats = !showStats;
         }
 
         if (key == 'z' || key == 'Z') {
@@ -81,7 +89,7 @@ WebAssembly.instantiateStreaming(fetch('ggas.wasm'), importObject)
         }
 
         if (key == 'w' || key == 'W') {
-            perturbVelocity(numParticles, 10.0);
+            perturbVelocity(numParticles, 0.50);
         }
 
         if (key == 'e' || key == 'E') {
@@ -145,7 +153,6 @@ WebAssembly.instantiateStreaming(fetch('ggas.wasm'), importObject)
     
     const betaFPSfilter = 1.0 / 100.0;
     var filteredFPS = 0.0;
-    var showStats = true;
 
     //initializeUniformly(numParticles, M0, U0, 0.0, width, 0.0, height);
     initializeDisc(numParticles, M0, U0, width / 2.0, height / 2.0, height / 3.0);
@@ -190,10 +197,16 @@ WebAssembly.instantiateStreaming(fetch('ggas.wasm'), importObject)
             const Lz = calcAngularMomentumZ(numParticles);
             const totalE = calcTotalEnergy(numParticles);
 
+            const avgleaf = averageLeafsize();
+            const avgdepth = averageDepth();
+
             ctx.globalAlpha = 1.00;
             ctx.fillStyle = 'rgb(32, 32, 255)';
             ctx.font = '16px Courier New';
-            ctx.fillText('sim. time = ' + simTime.toFixed(3) + ' [nondim]', 10.0, height - 30.0);
+            ctx.fillText('sim. time = ' + simTime.toFixed(3) + ' [a.u.]' 
+                         + ', <leafsize> = ' + avgleaf.toFixed(2) 
+                         + ', <depth> = ' + avgdepth.toFixed(2), 
+                         10.0, height - 30.0);
             ctx.fillText('wall time = ' + time.toFixed(3) + ' [s], <fps> = ' + filteredFPS.toFixed(1), 10.0, height - 10.0);
             ctx.fillText('part. = ' + numParticles + ', grav. = ' + Gstrength.toFixed(3) + ', pres. = ' + U0.toFixed(3), 10.0, 20.0);
             statStr = 'Px = ' + Px.toFixed(3) + ', Py = ' + Py.toFixed(3) + ', Lz = ' + Lz.toFixed(3) + ', Energy = ' + totalE.toFixed(3);
@@ -226,8 +239,15 @@ WebAssembly.instantiateStreaming(fetch('ggas.wasm'), importObject)
         const rect = canvas.getBoundingClientRect();
         const mouseX = event.clientX - rect.left;
         const mouseY = event.clientY - rect.top;
-        if (addParticleAt(numParticles, M0, U0, mouseX, mouseY, 0.0, 0.0))
-            numParticles += 1;
+        if (event.shiftKey) {
+            const bunchSize = 50;
+            const bunchSigma = 10.0;
+            if (addGaussianAt(numParticles, bunchSize, M0, U0, mouseX, mouseY, bunchSigma, 0.0, 0.0))
+                numParticles += bunchSize;
+        } else {
+            if (addParticleAt(numParticles, M0, U0, mouseX, mouseY, 0.0, 0.0))
+                numParticles += 1;
+        }
     }
 
     canvas.addEventListener('mousedown', handleMouseDown);

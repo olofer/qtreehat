@@ -405,6 +405,16 @@ double getParticleRho(int i) {
 }
 
 EMSCRIPTEN_KEEPALIVE
+double averageLeafsize(void) {
+  return qtree.average_leafsize();
+}
+
+EMSCRIPTEN_KEEPALIVE
+double averageDepth(void) {
+  return qtree.average_depth();
+}
+
+EMSCRIPTEN_KEEPALIVE
 bool addParticleAt(int n, 
                    double m, 
                    double u,
@@ -420,6 +430,29 @@ bool addParticleAt(int n,
   particle[n].vy = vy;
   particle[n].u = u;
   particle[n].m = m;
+  return true;
+}
+
+EMSCRIPTEN_KEEPALIVE
+bool addGaussianAt(int n,
+                   int g, 
+                   double m, 
+                   double u,
+                   double x,
+                   double y,
+                   double sigma,
+                   double vx, 
+                   double vy) 
+{
+  if (n + g >= NMAX) return false;
+  for (int i = n; i < n + g; i++) {
+    particle[i].x = x + sigma * getApproximateNormal();
+    particle[i].y = y + sigma * getApproximateNormal();
+    particle[i].vx = vx;
+    particle[i].vy = vy;
+    particle[i].u = u;
+    particle[i].m = m;
+  }
   return true;
 }
 
