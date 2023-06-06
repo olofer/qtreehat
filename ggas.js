@@ -47,6 +47,15 @@ WebAssembly.instantiateStreaming(fetch('ggas.wasm'), importObject)
     var useEuler = false;
     var showStats = true;
 
+    const bkgndColor = 'rgb(240, 240, 240)';
+    const particleColors = ['rgb(192, 0, 255)',
+                            'rgb(255, 0, 0)',
+                            'rgb(0, 192, 128)',
+                            'rgb(0, 0, 255)',
+                            'rgb(0, 0, 0)',
+                            'rgb(0, 66, 37)'];
+    var particleColorIndex = particleColors.length - 1;
+
     const simulationDelta = 0.100;
 
     function keyDownEvent(e)
@@ -68,6 +77,10 @@ WebAssembly.instantiateStreaming(fetch('ggas.wasm'), importObject)
 
         if (key == 't' || key == 'T') {
             showStats = !showStats;
+        }
+
+        if (key == 'k' || key == 'K') {
+            particleColorIndex = (particleColorIndex + 1) % particleColors.length;
         }
 
         if (key == 'z' || key == 'Z') {
@@ -154,10 +167,12 @@ WebAssembly.instantiateStreaming(fetch('ggas.wasm'), importObject)
     const betaFPSfilter = 1.0 / 100.0;
     var filteredFPS = 0.0;
 
+    setPotentialType(0);
+
     //initializeUniformly(numParticles, M0, U0, 0.0, width, 0.0, height);
     initializeDisc(numParticles, M0, U0, width / 2.0, height / 2.0, height / 3.0);
-    forceSpin(numParticles, -2.0 * Math.PI / 500.0, true);
-    setPotentialType(0);
+    forceSpin(numParticles, -2.0 * Math.PI / 1000.0, true);
+    perturbVelocity(numParticles, 0.50);
 
     rebuildTree(numParticles);
     computeDensityAndDot(numParticles, Gstrength, treeCodeAccuracy);
@@ -177,12 +192,12 @@ WebAssembly.instantiateStreaming(fetch('ggas.wasm'), importObject)
         const simTime = getTime();
 
         ctx.globalAlpha = 1.00;
-        ctx.fillStyle = 'rgb(240, 240, 255)';
+        ctx.fillStyle = bkgndColor;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         const ptRadius = 3.0;
         ctx.globalAlpha = 0.25;
-        ctx.fillStyle = 'rgb(192, 0, 255)';
+        ctx.fillStyle = particleColors[particleColorIndex];
         for (var i = 0; i < numParticles; i++) {
             const xi = getParticleX(i);
             const yi = getParticleY(i);
